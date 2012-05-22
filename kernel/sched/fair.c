@@ -3738,9 +3738,15 @@ unsigned long scale_rt_power(int cpu)
 	 */
 	age_stamp = ACCESS_ONCE(rq->age_stamp);
 	avg = ACCESS_ONCE(rq->rt_avg);
+<<<<<<< HEAD
 
 	total = sched_avg_period() + (rq->clock - age_stamp);
 
+=======
+
+	total = sched_avg_period() + (rq->clock - age_stamp);
+
+>>>>>>> ff69219... sched: Make sure to not re-read variables after validation
 	if (unlikely(total < avg)) {
 		/* Ensures that power won't end up being negative */
 		available = 0;
