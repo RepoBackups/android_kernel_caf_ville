@@ -1172,8 +1172,17 @@ static bool mem_cgroup_same_or_subtree(const struct mem_cgroup *root_memcg,
 {
 	bool ret;
 
+<<<<<<< HEAD
 	rcu_read_lock();
 	ret = __mem_cgroup_same_or_subtree(root_memcg, memcg);
+=======
+	if (root_memcg == memcg)
+		return true;
+	if (!root_memcg->use_hierarchy)
+		return false;
+	rcu_read_lock();
+	ret = css_is_ancestor(&memcg->css, &root_memcg->css);
+>>>>>>> 41890e6... kernel: cgroup: push rcu read locking from css_is_ancestor() to callsite
 	rcu_read_unlock();
 	return ret;
 }
