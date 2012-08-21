@@ -131,7 +131,11 @@ struct compact_control {
 	int order;			/* order a direct compactor needs */
 	int migratetype;		/* MOVABLE, RECLAIMABLE etc */
 	struct zone *zone;
+<<<<<<< HEAD
 	bool contended;			/* True if a lock was contended */
+=======
+	bool *contended;		/* True if a lock was contended */
+>>>>>>> 8457223... mm: compaction: Abort async compaction if locks are contended or taking too long
 };
 
 unsigned long
