@@ -2192,6 +2192,9 @@ static int __init cpufreq_core_init(void)
 	cpufreq_global_kobject->kset = cpufreq_kset;
 
 	register_syscore_ops(&cpufreq_syscore_ops);
+#ifdef CONFIG_CPU_VOLTAGE_TABLE
+	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
+#endif	/* CONFIG_CPU_VOLTAGE_TABLE */
 
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
