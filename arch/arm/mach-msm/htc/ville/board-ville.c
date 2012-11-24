@@ -3525,6 +3525,10 @@ static void msm_region_id_gpio_init(void)
 	gpio_tlmm_config(msm_region_gpio[0], GPIO_CFG_ENABLE);
 }
 
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND 
+int id_set_two_phase_freq(int cpufreq);
+#endif
+
 #ifdef CONFIG_RAWCHIP
 static struct spi_board_info rawchip_spi_board_info[] __initdata = {
 	{
@@ -3612,7 +3616,10 @@ static void __init ville_init(void)
 
 //	create_proc_read_entry("emmc", 0, NULL, emmc_partition_read_proc, NULL);
 //	create_proc_read_entry("dying_processes", 0, NULL, dying_processors_read_proc, NULL);
-
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+        if(!cpu_is_krait_v1())
+                id_set_two_phase_freq(1134000);
+#endif
 	/*usb driver won't be loaded in MFG 58 station and gift mode*/
 	if (!(board_mfg_mode() == 6 || board_mfg_mode() == 7))
 		ville_add_usb_devices();
