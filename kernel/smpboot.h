@@ -8,6 +8,7 @@ int smpboot_prepare(unsigned int cpu);
 #ifdef CONFIG_GENERIC_SMP_IDLE_THREAD
 struct task_struct *idle_thread_get(unsigned int cpu);
 void idle_thread_set_boot_cpu(void);
+<<<<<<< HEAD
 void idle_threads_init(void);
 #else
 static inline struct task_struct *idle_thread_get(unsigned int cpu) { return NULL; }
@@ -20,3 +21,11 @@ void smpboot_park_threads(unsigned int cpu);
 void smpboot_unpark_threads(unsigned int cpu);
 
 #endif
+=======
+#else
+static inline struct task_struct *idle_thread_get(unsigned int cpu) { return NULL; }
+static inline void idle_thread_set_boot_cpu(void) { }
+#endif
+
+#endif
+>>>>>>> f9192cd... smp: patches from mainline 3.5 to hopefully help with hotplug

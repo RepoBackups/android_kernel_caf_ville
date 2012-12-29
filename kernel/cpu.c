@@ -17,8 +17,11 @@
 #include <linux/gfp.h>
 #include <linux/suspend.h>
 
+<<<<<<< HEAD
 #include <trace/events/sched.h>
 
+=======
+>>>>>>> f9192cd... smp: patches from mainline 3.5 to hopefully help with hotplug
 #include "smpboot.h"
 
 #ifdef CONFIG_SMP
@@ -336,6 +339,7 @@ static int __cpuinit _cpu_up(unsigned int cpu, int tasks_frozen)
 
 	cpu_hotplug_begin();
 
+<<<<<<< HEAD
 	idle = idle_thread_get(cpu);
 	if (IS_ERR(idle)) {
 		ret = PTR_ERR(idle);
@@ -343,6 +347,9 @@ static int __cpuinit _cpu_up(unsigned int cpu, int tasks_frozen)
 	}
 
 	ret = smpboot_create_threads(cpu);
+=======
+	ret = smpboot_prepare(cpu);
+>>>>>>> f9192cd... smp: patches from mainline 3.5 to hopefully help with hotplug
 	if (ret)
 		goto out;
 
@@ -355,7 +362,7 @@ static int __cpuinit _cpu_up(unsigned int cpu, int tasks_frozen)
 	}
 
 	/* Arch-specific enabling code. */
-	ret = __cpu_up(cpu);
+	ret = __cpu_up(cpu, idle_thread_get(cpu));
 	if (ret != 0)
 		goto out_notify;
 	BUG_ON(!cpu_online(cpu));
