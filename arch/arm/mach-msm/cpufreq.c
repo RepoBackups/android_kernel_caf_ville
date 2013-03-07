@@ -81,65 +81,6 @@ struct cpu_freq {
 
 static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
-#ifdef CONFIG_CMDLINE_OPTIONS
-/*
- * start cmdline_khz
- */
-
-/* to be safe, fill vars with defaults */
-
-uint32_t cmdline_maxkhz = CONFIG_MSM_CPU_FREQ_MAX;
-
-/* only override the governor 2 times, when
- * initially bringing up cpufreq on the cpus */
-int cmdline_gov_cnt = CONFIG_NR_CPUS;
-
-static int __init cpufreq_read_maxkhz_cmdline(char *maxkhz)
-{
-	unsigned long ui_khz;
-	unsigned long *f;
- 	unsigned long valid_freq[3] = {1512000, 1674000, 1728000};
-	int err;
-
-	err = strict_strtoul(maxkhz, 0, &ui_khz);
-	if (err) {
-		cmdline_maxkhz = CONFIG_MSM_CPU_FREQ_MAX;
-		printk(KERN_INFO "[cmdline_khz_max]: ERROR while converting! using default value!");
-		printk(KERN_INFO "[cmdline_khz_max]: maxkhz='%i'\n", cmdline_maxkhz);
-		return 1;
-	}
-
-	/* Check if parsed value is valid */
-	if (ui_khz > 1728000) {
-		cmdline_maxkhz = CONFIG_MSM_CPU_FREQ_MAX;
-	} else if (ui_khz < 1512000) {
-		cmdline_maxkhz = CONFIG_MSM_CPU_FREQ_MAX;	
-	} else {
-		for (f = valid_freq; f != 0; f++) {
-			if (*f == ui_khz) {
-				cmdline_maxkhz = ui_khz;
-				return 1;
-			}
-			if (ui_khz > *f) {
-				f++;
-				if (ui_khz < *f) {
-					f--;
-					cmdline_maxkhz = *f;
-					printk(KERN_INFO "[cmdline_2dgpu]: AUTOCORRECT! Couldn't find entered value");
-					return 1;
-				}
-				f--;
-			}
-		}
-	}
-        return 1;
-}
-__setup("maxkhz=", cpufreq_read_maxkhz_cmdline);
-
-
-/* end cmdline_khz */
-#endif
-
 static void update_l2_bw(int *also_cpu)
 {
 	int rc = 0, cpu;
@@ -374,6 +315,10 @@ int msm_cpufreq_set_freq_limits(uint32_t cpu, uint32_t min, uint32_t max)
 }
 EXPORT_SYMBOL(msm_cpufreq_set_freq_limits);
 
+#ifdef CONFIG_LOW_CPUCLOCKS
+#define LOW_CPUCLOCKS_FREQ_MIN  162000
+#endif
+
 static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 {
 	int cur_freq;
@@ -395,23 +340,21 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 
 	if (cpufreq_frequency_table_cpuinfo(policy, table)) {
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
-#ifdef CONFIG_CMDLINE_OPTIONS
-		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
-		policy->cpuinfo.max_freq = cmdline_maxkhz;
+#ifdef CONFIG_LOW_CPUCLOCKS
+    policy->cpuinfo.min_freq = LOW_CPUCLOCKS_FREQ_MIN;
 #else
 		policy->cpuinfo.min_freq = CONFIG_MSM_CPU_FREQ_MIN;
-		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
+		policy->cpuinfo.max_freq = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
 	}
 #ifdef CONFIG_MSM_CPU_FREQ_SET_MIN_MAX
-#ifdef CONFIG_CMDLINE_OPTIONS
-		policy->min = CONFIG_MSM_CPU_FREQ_MIN;
-		policy->max = cmdline_maxkhz;
+#ifdef CONFIG_LOW_CPUCLOCKS
+	policy->min = LOW_CPUCLOCKS_FREQ_MIN;
 #else
-		policy->min = CONFIG_MSM_CPU_FREQ_MIN;
-		policy->max = CONFIG_MSM_CPU_FREQ_MAX;
+	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
 #endif
+	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
 #endif
 
 	if (is_clk)
@@ -445,15 +388,9 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	INIT_WORK(&cpu_work->work, set_cpu_work);
 	init_completion(&cpu_work->complete);
 
-#ifdef CONFIG_CMDLINE_OPTIONS
-	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
-	policy->max = cmdline_maxkhz;
-#endif
-
-	/* set safe default min and max speeds 
+	/* set safe default min and max speeds */
 	policy->max = 1512000;
-	policy->min = 384000;*/
-	
+	policy->min = 384000;
 	return 0;
 }
 
@@ -463,18 +400,15 @@ extern bool lmf_screen_state;
 
 static void msm_cpu_early_suspend(struct early_suspend *h)
 {
-
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
 	int cpu = 0;
 
 	for_each_possible_cpu(cpu) {
-
 		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		lmf_screen_state = false;
 		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 	}
 #endif
-
 }
 
 static void msm_cpu_late_resume(struct early_suspend *h)
@@ -487,7 +421,7 @@ static void msm_cpu_late_resume(struct early_suspend *h)
 		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		lmf_screen_state = true;
 		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
-	}
+		}
 #endif
 }
 
@@ -501,18 +435,20 @@ static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
 {
 	unsigned int cpu = (unsigned long)hcpu;
-	int rc;
 
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_ONLINE:
+	case CPU_ONLINE_FROZEN:
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 		break;
 	case CPU_DOWN_PREPARE:
+	case CPU_DOWN_PREPARE_FROZEN:
 		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 1;
 		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		break;
 	case CPU_DOWN_FAILED:
+	case CPU_DOWN_FAILED_FROZEN:
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 		break;
 	/*
@@ -556,10 +492,12 @@ static int msm_cpufreq_suspend(struct cpufreq_policy *policy)
 	int cpu;
 
 	for_each_possible_cpu(cpu) {
+		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 1;
+		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 	}
 
-	return 0;
+	return NOTIFY_DONE;
 }
 
 static int msm_cpufreq_resume(struct cpufreq_policy *policy)
@@ -570,7 +508,7 @@ static int msm_cpufreq_resume(struct cpufreq_policy *policy)
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
 	}
 
-	return 0;
+	return NOTIFY_DONE;
 }
 
 static struct freq_attr *msm_freq_attr[] = {
