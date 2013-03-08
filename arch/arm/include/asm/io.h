@@ -330,7 +330,7 @@ extern void _memset_io(volatile void __iomem *, int, size_t);
 #define iounmap				__arm_iounmap
 
 /*
- * io{read,write}{8,16,32} macros
+ * io{read,write}{8,16,32,64} macros
  */
 #ifndef ioread8
 #define ioread8(p)	({ unsigned int __v = __raw_readb(p); __iormb(); __v; })
