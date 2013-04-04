@@ -4,6 +4,7 @@
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
  *                      Jun Nakajima <jun.nakajima@intel.com>
+ *            (c)  2013 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -111,13 +112,26 @@ static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info);
 static unsigned int dbs_enable;	/* number of CPUs using this policy */
 
 /*
- * dbs_mutex protects dbs_enable and dbs_info during start/stop.
+ * dbs_mutex protects dbs_enable in governor start/stop.
  */
 static DEFINE_MUTEX(dbs_mutex);
 
 static struct workqueue_struct *input_wq;
 
-static DEFINE_PER_CPU(struct work_struct, dbs_refresh_work);
+struct dbs_work_struct {
+	struct work_struct work;
+	unsigned int cpu;
+};
+
+static DEFINE_PER_CPU(struct dbs_work_struct, dbs_refresh_work);
+
+struct dbs_sync_work_struct {
+	struct work_struct work;
+	unsigned int src_cpu;
+	unsigned int targ_cpu;
+};
+
+static DEFINE_PER_CPU(struct dbs_sync_work_struct, dbs_sync_work);
 
 static struct dbs_tuners {
 	unsigned int sampling_rate;
@@ -571,10 +585,6 @@ static ssize_t store_powersave_bias(struct kobject *a, struct attribute *b,
 				POWERSAVE_BIAS_MINLEVEL));
 
 	dbs_tuners_ins.powersave_bias = input;
-
-	mutex_lock(&dbs_mutex);
-	get_online_cpus();
-
 	if (!bypass) {
 		if (reenable_timer) {
 			/* reinstate dbs timer */
@@ -627,23 +637,20 @@ skip_this_cpu:
 
 			if (dbs_info->cur_policy) {
 				/* cpu using ondemand, cancel dbs timer */
+				mutex_lock(&dbs_info->timer_mutex);
 				dbs_timer_exit(dbs_info);
 
-				mutex_lock(&dbs_info->timer_mutex);
 				ondemand_powersave_bias_setspeed(
 					dbs_info->cur_policy,
 					NULL,
 					input);
-				mutex_unlock(&dbs_info->timer_mutex);
 
+				mutex_unlock(&dbs_info->timer_mutex);
 			}
 skip_this_cpu_bypass:
 			unlock_policy_rwsem_write(cpu);
 		}
 	}
-
-	put_online_cpus();
-	mutex_unlock(&dbs_mutex);
 
 	return count;
 }
@@ -979,11 +986,15 @@ static int should_io_be_busy(void)
 	return 0;
 }
 
-static void dbs_refresh_callback(struct work_struct *unused)
+static void dbs_refresh_callback(struct work_struct *work)
 {
 	struct cpufreq_policy *policy;
 	struct cpu_dbs_info_s *this_dbs_info;
-	unsigned int cpu = smp_processor_id();
+	struct dbs_work_struct *dbs_work;
+	unsigned int cpu;
+
+	dbs_work = container_of(work, struct dbs_work_struct, work);
+	cpu = dbs_work->cpu;
 
 	get_online_cpus();
 
@@ -1018,6 +1029,92 @@ bail_acq_sema_failed:
 	return;
 }
 
+static int dbs_migration_notify(struct notifier_block *nb,
+				unsigned long target_cpu, void *arg)
+{
+	struct dbs_sync_work_struct *sync_work =
+		&per_cpu(dbs_sync_work, target_cpu);
+	sync_work->src_cpu = (unsigned int)arg;
+
+	queue_work_on(target_cpu, input_wq,
+		&per_cpu(dbs_sync_work, target_cpu).work);
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block dbs_migration_nb = {
+	.notifier_call = dbs_migration_notify,
+};
+
+void dbs_synchronize(struct work_struct *work)
+{
+	struct cpufreq_policy *policy;
+	struct cpu_dbs_info_s *this_dbs_info, *src_dbs_info;
+	struct dbs_sync_work_struct *dbs_work;
+	unsigned int cpu, src_cpu;
+	unsigned int src_freq, src_max_load;
+	int delay;
+
+	dbs_work = container_of(work, struct dbs_sync_work_struct, work);
+	cpu = dbs_work->targ_cpu;
+	src_cpu = dbs_work->src_cpu;
+
+	get_online_cpus();
+
+	/* Getting source cpu info  */
+	src_dbs_info = &per_cpu(od_cpu_dbs_info, src_cpu);
+	if (src_dbs_info != NULL && src_dbs_info->cur_policy != NULL) {
+		src_freq = src_dbs_info->cur_policy->cur;
+		src_max_load = src_dbs_info->max_load;
+	} else {
+		src_freq = dbs_tuners_ins.sync_freq;
+		src_max_load = 0;
+	}
+
+	if (lock_policy_rwsem_write(cpu) < 0)
+		goto bail_acq_sema_failed;
+
+	this_dbs_info = &per_cpu(od_cpu_dbs_info, cpu);
+	policy = this_dbs_info->cur_policy;
+	if (!policy) {
+		/* CPU not using ondemand governor */
+		goto bail_incorrect_governor;
+	}
+
+	delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
+
+	if (policy->cur < src_freq) {
+
+		/* Cancelling the next ondemand sample */
+		cancel_delayed_work_sync(&this_dbs_info->work);
+
+		/*
+		 * Arch specific cpufreq driver may fail.
+		 * Don't update governor frequency upon failure.
+		 */
+		if (__cpufreq_driver_target(policy, src_freq,
+					CPUFREQ_RELATION_L) >= 0) {
+			policy->cur = src_freq;
+			if (src_max_load > this_dbs_info->max_load) {
+				this_dbs_info->max_load = src_max_load;
+				this_dbs_info->prev_load = src_max_load;
+			}
+		}
+
+		/* Rescheduling the next ondemand sample */
+		mutex_lock(&this_dbs_info->timer_mutex);
+		schedule_delayed_work_on(cpu, &this_dbs_info->work,
+					delay);
+		mutex_unlock(&this_dbs_info->timer_mutex);
+	}
+bail_incorrect_governor:
+	unlock_policy_rwsem_write(cpu);
+
+bail_acq_sema_failed:
+	put_online_cpus();
+	return;
+}
+
 static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		unsigned int code, int value)
 {
@@ -1029,9 +1126,8 @@ static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		return;
 	}
 
-	for_each_online_cpu(i) {
-		queue_work_on(i, input_wq, &per_cpu(dbs_refresh_work, i));
-	}
+	for_each_online_cpu(i)
+		queue_work_on(i, input_wq, &per_cpu(dbs_refresh_work, i).work);
 }
 
 static int dbs_input_connect(struct input_handler *handler,
@@ -1147,6 +1243,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 			if (dbs_tuners_ins.sync_freq == 0)
 				dbs_tuners_ins.sync_freq = policy->min;
+
+			atomic_notifier_chain_register(&migration_notifier_head,
+					&dbs_migration_nb);
 		}
 		if (!cpu)
 			rc = input_register_handler(&dbs_input_handler);
@@ -1170,20 +1269,20 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		this_dbs_info->cur_policy = NULL;
 		if (!cpu)
 			input_unregister_handler(&dbs_input_handler);
-		if (!dbs_enable)
+		if (!dbs_enable) {
 			sysfs_remove_group(cpufreq_global_kobject,
 					   &dbs_attr_group);
+			atomic_notifier_chain_unregister(
+				&migration_notifier_head,
+				&dbs_migration_nb);
+		}
+
 		mutex_unlock(&dbs_mutex);
 
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
 		mutex_lock(&this_dbs_info->timer_mutex);
-		if (!this_dbs_info->cur_policy) {
-			pr_err("Dbs policy is NULL\n");
-			mutex_unlock(&this_dbs_info->timer_mutex);
-			return -EINVAL;
-		}
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
 				policy->max, CPUFREQ_RELATION_H);
@@ -1234,8 +1333,19 @@ static int __init cpufreq_gov_dbs_init(void)
 	for_each_possible_cpu(i) {
 		struct cpu_dbs_info_s *this_dbs_info =
 			&per_cpu(od_cpu_dbs_info, i);
+		struct dbs_work_struct *dbs_work =
+			&per_cpu(dbs_refresh_work, i);
+		struct dbs_sync_work_struct *dbs_sync =
+			&per_cpu(dbs_sync_work, i);
+
 		mutex_init(&this_dbs_info->timer_mutex);
-		INIT_WORK(&per_cpu(dbs_refresh_work, i), dbs_refresh_callback);
+		INIT_WORK(&dbs_work->work, dbs_refresh_callback);
+		dbs_work->cpu = i;
+
+		INIT_WORK(&dbs_sync->work, dbs_synchronize);
+		dbs_sync->src_cpu = 0;
+		dbs_sync->targ_cpu = i;
+
 	}
 
 	return cpufreq_register_governor(&cpufreq_gov_ondemand);
