@@ -123,12 +123,12 @@ void *kthread_data(struct task_struct *task)
 
 static void __kthread_parkme(struct kthread *self)
 {
-	__set_current_state(TASK_INTERRUPTIBLE);
+	__set_current_state(TASK_PARKED);
 	while (test_bit(KTHREAD_SHOULD_PARK, &self->flags)) {
 		if (!test_and_set_bit(KTHREAD_IS_PARKED, &self->flags))
 			complete(&self->parked);
 		schedule();
-		__set_current_state(TASK_INTERRUPTIBLE);
+		__set_current_state(TASK_PARKED);
 	}
 	clear_bit(KTHREAD_IS_PARKED, &self->flags);
 	__set_current_state(TASK_RUNNING);
@@ -261,6 +261,10 @@ static void __kthread_bind(struct task_struct *p, unsigned int cpu, long state)
 	if (!wait_task_inactive(p, state)) {
 		WARN_ON(1);
 		return;
+<<<<<<< HEAD
+=======
+	}
+>>>>>>> d416fe7... kthread: Prevent unpark race which puts threads on the wrong cpu
 	/* It's safe because the task is inactive. */
 	do_set_cpus_allowed(p, cpumask_of(cpu));
 	p->flags |= PF_THREAD_BOUND;
@@ -278,6 +282,7 @@ static void __kthread_bind(struct task_struct *p, unsigned int cpu, long state)
 void kthread_bind(struct task_struct *p, unsigned int cpu)
 {
 	__kthread_bind(p, cpu, TASK_UNINTERRUPTIBLE);
+<<<<<<< HEAD
 }
 EXPORT_SYMBOL(kthread_bind);
 
@@ -385,6 +390,8 @@ int kthread_park(struct task_struct *k)
 	put_task_struct(k);
 	return ret;
 	__kthread_bind(p, cpu);
+=======
+>>>>>>> d416fe7... kthread: Prevent unpark race which puts threads on the wrong cpu
 }
 
 /**
@@ -428,6 +435,22 @@ static struct kthread *task_get_live_kthread(struct task_struct *k)
 	return NULL;
 }
 
+static void __kthread_unpark(struct task_struct *k, struct kthread *kthread)
+{
+	clear_bit(KTHREAD_SHOULD_PARK, &kthread->flags);
+	/*
+	 * We clear the IS_PARKED bit here as we don't wait
+	 * until the task has left the park code. So if we'd
+	 * park before that happens we'd see the IS_PARKED bit
+	 * which might be about to be cleared.
+	 */
+	if (test_and_clear_bit(KTHREAD_IS_PARKED, &kthread->flags)) {
+		if (test_bit(KTHREAD_IS_PER_CPU, &kthread->flags))
+			__kthread_bind(k, kthread->cpu, TASK_PARKED);
+		wake_up_state(k, TASK_PARKED);
+	}
+}
+
 /**
  * kthread_unpark - unpark a thread created by kthread_create().
  * @k:		thread created by kthread_create().
@@ -440,20 +463,8 @@ void kthread_unpark(struct task_struct *k)
 {
 	struct kthread *kthread = task_get_live_kthread(k);
 
-	if (kthread) {
-		clear_bit(KTHREAD_SHOULD_PARK, &kthread->flags);
-		/*
-		 * We clear the IS_PARKED bit here as we don't wait
-		 * until the task has left the park code. So if we'd
-		 * park before that happens we'd see the IS_PARKED bit
-		 * which might be about to be cleared.
-		 */
-		if (test_and_clear_bit(KTHREAD_IS_PARKED, &kthread->flags)) {
-			if (test_bit(KTHREAD_IS_PER_CPU, &kthread->flags))
-				__kthread_bind(k, kthread->cpu);
-			wake_up_process(k);
-		}
-	}
+	if (kthread)
+		__kthread_unpark(k, kthread);
 	put_task_struct(k);
 }
 
@@ -512,7 +523,10 @@ int kthread_stop(struct task_struct *k)
 	if (kthread) {
 		set_bit(KTHREAD_SHOULD_STOP, &kthread->flags);
 		__kthread_unpark(k, kthread);
+<<<<<<< HEAD
 		clear_bit(KTHREAD_SHOULD_PARK, &kthread->flags);
+=======
+>>>>>>> d416fe7... kthread: Prevent unpark race which puts threads on the wrong cpu
 		wake_up_process(k);
 		wait_for_completion(&kthread->exited);
 	}
