@@ -2880,8 +2880,8 @@ static inline int started_after(void *p1, void *p2)
 int cgroup_scan_tasks(struct cgroup_scanner *scan)
 {
 	int retval, i;
-	struct cgroup_iter it;
-	struct task_struct *p, *dropped;
+	struct cgroup_iter it = {0};
+	struct task_struct *p = 0, *dropped;
 	/* Never dereference latest_task, since it's not refcounted */
 	struct task_struct *latest_task = NULL;
 	struct ptr_heap tmp_heap;
@@ -3160,7 +3160,7 @@ static int pidlist_array_load(struct cgroup *cgrp, enum cgroup_filetype type,
 	pid_t *array;
 	int length;
 	int pid, n = 0; /* used for populating the array */
-	struct cgroup_iter it;
+	struct cgroup_iter it = {0};
 	struct task_struct *tsk;
 	struct cgroup_pidlist *l;
 
@@ -3221,7 +3221,7 @@ int cgroupstats_build(struct cgroupstats *stats, struct dentry *dentry)
 {
 	int ret = -EINVAL;
 	struct cgroup *cgrp;
-	struct cgroup_iter it;
+	struct cgroup_iter it = {0};
 	struct task_struct *tsk;
 
 	/*
