@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,12 +17,19 @@
 struct msm_thermal_data {
 	uint32_t sensor_id;
 	uint32_t poll_ms;
-	int32_t limit_temp_degC;
-	int32_t temp_hysteresis_degC;
-	uint32_t freq_step;
-	int32_t core_limit_temp_degC;
-	int32_t core_temp_hysteresis_degC;
-	uint32_t core_control_mask;
+	uint32_t shutdown_temp;
+
+	uint32_t allowed_max_high;
+	uint32_t allowed_max_low;
+	uint32_t allowed_max_freq;
+
+	uint32_t allowed_mid_high;
+	uint32_t allowed_mid_low;
+	uint32_t allowed_mid_freq;
+
+	uint32_t allowed_low_high;
+	uint32_t allowed_low_low;
+	uint32_t allowed_low_freq;
 };
 
 #ifdef CONFIG_THERMAL_MONITOR
@@ -39,4 +46,5 @@ static inline int msm_thermal_device_init(void)
 }
 #endif
 
-#endif /*__MSM_THERMAL_H*/
+#endif 
+
