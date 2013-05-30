@@ -29,6 +29,7 @@
 #include <linux/cpufreq.h>
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
+#include <linux/suspend.h>
 #include <asm/smp_plat.h>
 #include "acpuclock.h"
 #include <linux/suspend.h>
