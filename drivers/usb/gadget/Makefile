@@ -1,6 +1,7 @@
 #
 # USB peripheral controller drivers
 #
+CFLAGS_android.o += -Wno-sizeof-pointer-memaccess
 ccflags-$(CONFIG_USB_GADGET_DEBUG) := -DDEBUG
 
 obj-$(CONFIG_USB_GADGET)	+= udc-core.o
