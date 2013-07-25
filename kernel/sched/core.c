@@ -2186,6 +2186,7 @@ unsigned long this_cpu_load(void)
 	return this->cpu_load[0];
 }
 
+<<<<<<< HEAD
 #ifdef CONFIG_INTELLI_PLUG
 unsigned long avg_nr_running(void)
 {
@@ -2239,6 +2240,14 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 	return ave_nr_running;
 }
 EXPORT_SYMBOL(avg_cpu_nr_running);
+=======
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+unsigned long this_cpu_loadx(int i)
+{
+	struct rq *this = this_rq();
+	return this->cpu_load[i];
+}
+>>>>>>> 7d423dc... Android ZRAM Optimizations: adapted from Samsung JF series kernel
 #endif
 
 /*
