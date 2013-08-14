@@ -1186,6 +1186,18 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 
 #ifdef CONFIG_SMP
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_HOTPLUG_CPU
+	strncpy(per_cpu(cpufreq_policy_save, cpu).gov, data->governor->name,
+			CPUFREQ_NAME_LEN);
+	per_cpu(cpufreq_policy_save, cpu).min = data->user_policy.min;
+	per_cpu(cpufreq_policy_save, cpu).max = data->user_policy.max;
+	pr_debug("Saving CPU%d user policy min %d and max %d\n",
+			cpu, data->user_policy.min, data->user_policy.max);
+#endif
+
+>>>>>>> e31d71a... cpufreq: Save user policy min/max instead of policy min/max during hotplug
 	/* if we have other CPUs still registered, we need to unlink them,
 	 * or else wait_for_completion below will lock up. Clean the
 	 * per_cpu(cpufreq_cpu_data) while holding the lock, and remove
@@ -1206,6 +1218,19 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 			if (j == cpu)
 				continue;
 			pr_debug("removing link for cpu %u\n", j);
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_HOTPLUG_CPU
+			strncpy(per_cpu(cpufreq_policy_save, j).gov,
+				data->governor->name, CPUFREQ_NAME_LEN);
+			per_cpu(cpufreq_policy_save, j).min
+						= data->user_policy.min;
+			per_cpu(cpufreq_policy_save, j).max
+						= data->user_policy.max;
+			pr_debug("Saving CPU%d user policy min %d and max %d\n",
+					j, data->min, data->max);
+#endif
+>>>>>>> e31d71a... cpufreq: Save user policy min/max instead of policy min/max during hotplug
 			cpu_dev = get_cpu_device(j);
 			kobj = &cpu_dev->kobj;
 			unlock_policy_rwsem_write(cpu);
