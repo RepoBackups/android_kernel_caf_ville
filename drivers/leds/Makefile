@@ -24,6 +24,7 @@ else
 obj-$(CONFIG_LEDS_PM8XXX)		+= leds-pm8xxx.o
 endif
 obj-$(CONFIG_LEDS_PM8XXX_multiplier)	+= leds-pm8xxx-multiplier.o
+obj-$(CONFIG_LEDS_PM8038)		+= leds-pm8038.o
 obj-$(CONFIG_LEDS_QPNP)			+= leds-qpnp.o
 obj-$(CONFIG_LEDS_GPIO_REGISTER)	+= leds-gpio-register.o
 obj-$(CONFIG_LEDS_GPIO)			+= leds-gpio.o
