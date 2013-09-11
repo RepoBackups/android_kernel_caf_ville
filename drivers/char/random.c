@@ -310,44 +310,42 @@ static DEFINE_PER_CPU(int, trickle_count);
  * get the twisting happening as fast as possible.
  */
 static struct poolinfo {
-	int poolwords;
+	int poolbitshift, poolwords, poolbytes, poolbits;
+#define S(x) ilog2(x)+5, (x), (x)*4, (x)*32
 	int tap1, tap2, tap3, tap4, tap5;
 } poolinfo_table[] = {
 	/* x^128 + x^103 + x^76 + x^51 +x^25 + x + 1 -- 105 */
-	{ 128,	103,	76,	51,	25,	1 },
+	{ S(128),	103,	76,	51,	25,	1 },
 	/* x^32 + x^26 + x^20 + x^14 + x^7 + x + 1 -- 15 */
-	{ 32,	26,	20,	14,	7,	1 },
+	{ S(32),	26,	20,	14,	7,	1 },
 #if 0
 	/* x^2048 + x^1638 + x^1231 + x^819 + x^411 + x + 1  -- 115 */
-	{ 2048,	1638,	1231,	819,	411,	1 },
+	{ S(2048),	1638,	1231,	819,	411,	1 },
 
 	/* x^1024 + x^817 + x^615 + x^412 + x^204 + x + 1 -- 290 */
-	{ 1024,	817,	615,	412,	204,	1 },
+	{ S(1024),	817,	615,	412,	204,	1 },
 
 	/* x^1024 + x^819 + x^616 + x^410 + x^207 + x^2 + 1 -- 115 */
-	{ 1024,	819,	616,	410,	207,	2 },
+	{ S(1024),	819,	616,	410,	207,	2 },
 
 	/* x^512 + x^411 + x^308 + x^208 + x^104 + x + 1 -- 225 */
-	{ 512,	411,	308,	208,	104,	1 },
+	{ S(512),	411,	308,	208,	104,	1 },
 
 	/* x^512 + x^409 + x^307 + x^206 + x^102 + x^2 + 1 -- 95 */
-	{ 512,	409,	307,	206,	102,	2 },
+	{ S(512),	409,	307,	206,	102,	2 },
 	/* x^512 + x^409 + x^309 + x^205 + x^103 + x^2 + 1 -- 95 */
-	{ 512,	409,	309,	205,	103,	2 },
+	{ S(512),	409,	309,	205,	103,	2 },
 
 	/* x^256 + x^205 + x^155 + x^101 + x^52 + x + 1 -- 125 */
-	{ 256,	205,	155,	101,	52,	1 },
+	{ S(256),	205,	155,	101,	52,	1 },
 
 	/* x^128 + x^103 + x^78 + x^51 + x^27 + x^2 + 1 -- 70 */
-	{ 128,	103,	78,	51,	27,	2 },
+	{ S(128),	103,	78,	51,	27,	2 },
 
 	/* x^64 + x^52 + x^39 + x^26 + x^14 + x + 1 -- 15 */
-	{ 64,	52,	39,	26,	14,	1 },
+	{ S(64),	52,	39,	26,	14,	1 },
 #endif
 };
-
-#define POOLBITS	poolwords*32
-#define POOLBYTES	poolwords*4
 
 /*
  * For the purposes of better mixing, we use the CRC-32 polynomial as
@@ -437,6 +435,7 @@ struct entropy_store {
 	int entropy_count;
 	int entropy_total;
 	unsigned int initialized:1;
+	bool last_data_init;
 	__u8 last_data[EXTRACT_SIZE];
 };
 
@@ -602,8 +601,8 @@ retry:
 	if (entropy_count < 0) {
 		DEBUG_ENT("negative entropy/overflow\n");
 		entropy_count = 0;
-	} else if (entropy_count > r->poolinfo->POOLBITS)
-		entropy_count = r->poolinfo->POOLBITS;
+	} else if (entropy_count > r->poolinfo->poolbits)
+		entropy_count = r->poolinfo->poolbits;
 	if (cmpxchg(&r->entropy_count, orig, entropy_count) != orig)
 		goto retry;
 
@@ -818,7 +817,7 @@ static void xfer_secondary_pool(struct entropy_store *r, size_t nbytes)
 	__u32	tmp[OUTPUT_POOL_WORDS];
 
 	if (r->pull && r->entropy_count < nbytes * 8 &&
-	    r->entropy_count < r->poolinfo->POOLBITS) {
+	    r->entropy_count < r->poolinfo->poolbits) {
 		/* If we're limited, always leave two wakeup worth's BITS */
 		int rsvd = r->limit ? 0 : random_read_wakeup_thresh/4;
 		int bytes = nbytes;
@@ -829,7 +828,7 @@ static void xfer_secondary_pool(struct entropy_store *r, size_t nbytes)
 		bytes = min_t(int, bytes, sizeof(tmp));
 
 		DEBUG_ENT("going to reseed %s with %d bits "
-			  "(%d of %d requested)\n",
+			  "(%zu of %d requested)\n",
 			  r->name, bytes * 8, nbytes * 8, r->entropy_count);
 
 		bytes = extract_entropy(r->pull, tmp, bytes,
@@ -859,8 +858,8 @@ static size_t account(struct entropy_store *r, size_t nbytes, int min,
 	/* Hold lock while accounting */
 	spin_lock_irqsave(&r->lock, flags);
 
-	BUG_ON(r->entropy_count > r->poolinfo->POOLBITS);
-	DEBUG_ENT("trying to extract %d bits from %s\n",
+	BUG_ON(r->entropy_count > r->poolinfo->poolbits);
+	DEBUG_ENT("trying to extract %zu bits from %s\n",
 		  nbytes * 8, r->name);
 
 	/* Can we pull enough? */
@@ -882,7 +881,7 @@ static size_t account(struct entropy_store *r, size_t nbytes, int min,
 		}
 	}
 
-	DEBUG_ENT("debiting %d entropy credits from %s%s\n",
+	DEBUG_ENT("debiting %zu entropy credits from %s%s\n",
 		  nbytes * 8, r->name, r->limit ? "" : " (unlimited)");
 
 	spin_unlock_irqrestore(&r->lock, flags);
@@ -957,6 +956,10 @@ static ssize_t extract_entropy(struct entropy_store *r, void *buf,
 	ssize_t ret = 0, i;
 	__u8 tmp[EXTRACT_SIZE];
 
+	/* if last_data isn't primed, we need EXTRACT_SIZE extra bytes */
+	if (fips_enabled && !r->last_data_init)
+		nbytes += EXTRACT_SIZE;
+
 	trace_extract_entropy(r->name, nbytes, r->entropy_count, _RET_IP_);
 	xfer_secondary_pool(r, nbytes);
 	nbytes = account(r, nbytes, min, reserved);
@@ -966,6 +969,17 @@ static ssize_t extract_entropy(struct entropy_store *r, void *buf,
 
 		if (fips_enabled) {
 			unsigned long flags;
+
+
+			/* prime last_data value if need be, per fips 140-2 */
+			if (!r->last_data_init) {
+				spin_lock_irqsave(&r->lock, flags);
+				memcpy(r->last_data, tmp, EXTRACT_SIZE);
+				r->last_data_init = true;
+				nbytes -= EXTRACT_SIZE;
+				spin_unlock_irqrestore(&r->lock, flags);
+				extract_buf(r, tmp);
+			}
 
 			spin_lock_irqsave(&r->lock, flags);
 			if (!memcmp(tmp, r->last_data, EXTRACT_SIZE))
@@ -1086,8 +1100,9 @@ static void init_std_data(struct entropy_store *r)
 
 	r->entropy_count = 0;
 	r->entropy_total = 0;
+	r->last_data_init = false;
 	mix_pool_bytes(r, &now, sizeof(now), NULL);
-	for (i = r->poolinfo->POOLBYTES; i > 0; i -= sizeof(rv)) {
+	for (i = r->poolinfo->poolbytes; i > 0; i -= sizeof(rv)) {
 		if (!arch_get_random_long(&rv))
 			break;
 		mix_pool_bytes(r, &rv, sizeof(rv), NULL);
@@ -1142,11 +1157,16 @@ random_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 		if (n > SEC_XFER_SIZE)
 			n = SEC_XFER_SIZE;
 
-		DEBUG_ENT("reading %d bits\n", n*8);
+		DEBUG_ENT("reading %zu bits\n", n*8);
 
 		n = extract_entropy_user(&blocking_pool, buf, n);
 
-		DEBUG_ENT("read got %d bits (%d still needed)\n",
+		if (n < 0) {
+			retval = n;
+			break;
+		}
+
+		DEBUG_ENT("read got %zd bits (%zd still needed)\n",
 			  n*8, (nbytes-n)*8);
 
 		if (n == 0) {
@@ -1171,10 +1191,6 @@ random_read(struct file *file, char __user *buf, size_t nbytes, loff_t *ppos)
 			continue;
 		}
 
-		if (n < 0) {
-			retval = n;
-			break;
-		}
 		count += n;
 		buf += n;
 		nbytes -= n;
@@ -1383,6 +1399,7 @@ static int proc_do_uuid(ctl_table *table, int write,
 }
 
 static int sysctl_poolsize = INPUT_POOL_WORDS * 32;
+extern ctl_table random_table[];
 ctl_table random_table[] = {
 	{
 		.procname	= "poolsize",
@@ -1440,6 +1457,7 @@ int random_int_secret_init(void)
 	get_random_bytes(random_int_secret, sizeof(random_int_secret));
 	return 0;
 }
+late_initcall(random_int_secret_init);
 
 /*
  * Get a random word for internal kernel use only. Similar to urandom but
