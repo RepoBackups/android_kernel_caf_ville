@@ -78,5 +78,7 @@ extern struct blocking_notifier_head touchkey_notifier_list;
 extern int register_notifier_by_touchkey(struct notifier_block *nb);
 extern int unregister_notifier_by_touchkey(struct notifier_block *nb);
 #endif
-
+#ifdef CONFIG_BLN
+extern uint8_t touchscreen_is_on(void);
+#endif
 #endif
