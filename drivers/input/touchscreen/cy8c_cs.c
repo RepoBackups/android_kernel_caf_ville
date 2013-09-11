@@ -63,6 +63,17 @@ static void cy8c_cs_early_suspend(struct early_suspend *h);
 static void cy8c_cs_late_resume(struct early_suspend *h);
 #endif
 
+#ifdef CONFIG_BLN
+bool scr_suspended = false;
+
+extern uint8_t touchscreen_is_on(void) {
+	if (scr_suspended == false) {
+		return 1;
+	}
+	return 0;
+}
+#endif
+
 int i2c_cy8c_read(struct i2c_client *client, uint8_t addr, uint8_t *data, uint8_t length)
 {
 	int retry;
@@ -679,7 +690,11 @@ static int cy8c_cs_probe(struct i2c_client *client,
 	cs->use_irq = 1;
 	if (client->irq && cs->use_irq) {
 		ret = request_irq(client->irq, cy8c_cs_irq_handler,
+#ifdef CONFIG_BLN
+				  IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_NO_SUSPEND,
+#else
 				  IRQF_TRIGGER_FALLING,
+#endif
 				  cs->id.chipid == CS_CHIPID ? CYPRESS_SS_NAME : CYPRESS_CS_NAME,
 				  cs);
 		if (ret < 0) {
@@ -733,6 +748,11 @@ static int cy8c_cs_suspend(struct i2c_client *client, pm_message_t mesg)
 
 	pr_info("[cap] %s\n", __func__);
 
+#ifdef CONFIG_BLN
+	scr_suspended = true;
+	enable_irq_wake(client->irq);
+#endif
+
 	if (cs->func_support & CS_FUNC_PRINTRAW) {
 		ret = cancel_delayed_work_sync(&cs->work_raw);
 		if (!ret)
@@ -753,6 +773,12 @@ static int cy8c_cs_resume(struct i2c_client *client)
 	struct cy8c_cs_data *cs = i2c_get_clientdata(client);
 
 	pr_info("[cap] %s\n", __func__);
+
+#ifdef CONFIG_BLN
+	scr_suspended = false;
+	disable_irq_wake(client->irq);
+#endif
+
 	cs->reset();
 
 	usleep(50);
