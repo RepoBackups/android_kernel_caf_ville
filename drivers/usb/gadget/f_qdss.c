@@ -561,7 +561,7 @@ fail:
 static int qdss_bind_config(struct usb_configuration *c, const char *name)
 {
 	struct f_qdss *qdss;
-	int status, found = 0;
+	int status, found = 0, dim;
 	struct usb_qdss_ch *ch;
 	unsigned long flags;
 
@@ -583,7 +583,8 @@ static int qdss_bind_config(struct usb_configuration *c, const char *name)
 
 	spin_lock_irqsave(&d_lock, flags);
 	list_for_each_entry(ch, &usb_qdss_ch_list, list) {
-		if (!strncmp(name, ch->name, sizeof(ch->name))) {
+		dim = sizeof(ch->name);
+		if (!strncmp(name, ch->name, dim)) {
 			found = 1;
 			break;
 		}
@@ -725,7 +726,7 @@ struct usb_qdss_ch *usb_qdss_open(const char *name, void *priv,
 	struct usb_qdss_ch *ch;
 	struct f_qdss *qdss;
 	unsigned long flags;
-	int found = 0;
+	int found = 0, dim;
 
 	pr_debug("usb_qdss_open\n");
 
@@ -737,7 +738,8 @@ struct usb_qdss_ch *usb_qdss_open(const char *name, void *priv,
 	spin_lock_irqsave(&d_lock, flags);
 	/* Check if we already have a channel with this name */
 	list_for_each_entry(ch, &usb_qdss_ch_list, list) {
-		if (!strncmp(name, ch->name, sizeof(ch->name))) {
+		dim = sizeof(ch->name);
+		if (!strncmp(name, ch->name, dim)) {
 			found = 1;
 			break;
 		}
@@ -814,4 +816,5 @@ static int qdss_setup(void)
 {
 	return 0;
 }
+
 
