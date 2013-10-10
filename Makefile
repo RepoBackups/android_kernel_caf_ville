@@ -371,16 +371,24 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
-		   -fno-strict-aliasing -fno-common \
-		   -Werror-implicit-function-declaration \
-		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks
-KBUILD_AFLAGS_KERNEL :=
-KBUILD_CFLAGS_KERNEL :=
+CUSTOM_FLAG = -munaligned-access -mtune=cortex-a15 -mcpu=cortex-a15 \
+	-fpredictive-commoning -fgcse-after-reload -ftree-vectorize \
+	-fipa-cp-clone -fsingle-precision-constant -pipe \
+	-funswitch-loops
+
+KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wmaybe-uninitialized\
+	-fno-strict-aliasing -fno-common \
+	-Werror-implicit-function-declaration \
+	-Wno-format-security \
+	-fno-delete-null-pointer-checks $(CUSTOM_FLAG)
+
+# -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block
+
+KBUILD_AFLAGS_KERNEL := $(CUSTOM_FLAG)
+KBUILD_CFLAGS_KERNEL := $(CUSTOM_FLAG)
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_AFLAGS_MODULE  := -DMODULE
-KBUILD_CFLAGS_MODULE  := -DMODULE
+KBUILD_AFLAGS_MODULE  := -DMODULE $(CUSTOM_FLAG)
+KBUILD_CFLAGS_MODULE  := -DMODULE $(CUSTOM_FLAG)
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
