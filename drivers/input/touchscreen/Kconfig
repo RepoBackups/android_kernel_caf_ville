@@ -1047,4 +1047,9 @@ config TOUCHSCREEN_SYNAPTICS_REMOVE_FW_TIMEOUT
 	  Say Y here if your Synaptics touchscreen is prone to
 	  failures when reading the firmware condition.
 
+config TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+        tristate "Sweep2Wake for Cypress CS touchscreens"
+        depends on TOUCHSCREEN_CYPRESS_CS
+        default n
+
 endif
