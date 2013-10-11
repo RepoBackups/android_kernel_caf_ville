@@ -1027,3 +1027,8 @@ config TOUCHSCREEN_SYNAPTICS_3K
 	  This enables support for Synaptics RMI4 over I2C based touchscreens.
 
 endif
+
+config TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+        tristate "Sweep2Wake for Cypress CS touchscreens"
+        depends on TOUCHSCREEN_CYPRESS_CS
+        default n
