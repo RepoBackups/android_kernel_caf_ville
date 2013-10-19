@@ -48,6 +48,7 @@ static inline unsigned long find_zero(unsigned long mask)
 	return ret;
 }
 
+<<<<<<< HEAD
 #ifdef CONFIG_DCACHE_WORD_ACCESS
 
 #define zero_bytemask(mask) (mask)
@@ -89,6 +90,8 @@ static inline unsigned long load_unaligned_zeropad(const void *addr)
 
 #endif	/* DCACHE_WORD_ACCESS */
 
+=======
+>>>>>>> 8ac0f6d... ARM: 7449/1: use generic strnlen_user and strncpy_from_user functions
 #else	/* __ARMEB__ */
 #include <asm-generic/word-at-a-time.h>
 #endif
