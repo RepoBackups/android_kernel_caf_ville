@@ -30,6 +30,13 @@ config SPARC
 	select USE_GENERIC_SMP_HELPERS if SMP
 	select GENERIC_PCI_IOMAP
 	select HAVE_NMI_WATCHDOG if SPARC64
+<<<<<<< HEAD
+=======
+	select GENERIC_PCI_IOMAP
+	select HAVE_NMI_WATCHDOG if SPARC64
+	select HAVE_BPF_JIT
+	select GENERIC_SMP_IDLE_THREAD
+>>>>>>> 9a07af8... lib: Sparc's strncpy_from_user is generic enough, move under lib/
 	select GENERIC_STRNCPY_FROM_USER
 
 config SPARC32

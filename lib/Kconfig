@@ -19,9 +19,12 @@ config RATIONAL
 config GENERIC_STRNCPY_FROM_USER
 	bool
 
+<<<<<<< HEAD
 config GENERIC_STRNLEN_USER
 	bool
 
+=======
+>>>>>>> 9a07af8... lib: Sparc's strncpy_from_user is generic enough, move under lib/
 config GENERIC_FIND_FIRST_BIT
 	bool
 
