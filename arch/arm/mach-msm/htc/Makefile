@@ -22,4 +22,6 @@ obj-$(CONFIG_HTC_HEADSET_MGR) += htc_headset_mgr.o
 obj-$(CONFIG_HTC_HEADSET_PMIC) += htc_headset_pmic.o
 obj-$(CONFIG_HTC_HEADSET_ONE_WIRE) += htc_headset_one_wire.o
 
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o 
+
 CFLAGS_devices_htc.o += -Idrivers/staging/android
