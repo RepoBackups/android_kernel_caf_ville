@@ -1657,6 +1657,12 @@ config GPU_OVERCLOCK
   help
     Krait S4 GPU overclocking 
 
+config CPU_OVERCLOCK
+	bool "Enable CPU Overclocking option"
+	default n
+	help
+	  Enable CPU overclock for Krait S4 socs
+
 config CPU_VOLTAGE_TABLE
 	bool "Enable CPU Voltage Table via sysfs for adjustements"
 	default n
