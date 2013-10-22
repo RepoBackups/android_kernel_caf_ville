@@ -2264,6 +2264,8 @@ config MSM_MPDECISION
 	bool "stock mp decision"
 config MSM_MPDECISION_SHOWP
 	bool "mp decision by showp"
+config INTELLI_PLUG
+	bool "intelli_plug by faux123"
 endchoice
 
 config MSM_GSBI9_UART
