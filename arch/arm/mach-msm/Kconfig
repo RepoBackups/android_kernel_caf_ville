@@ -2257,6 +2257,15 @@ config MSM_STANDALONE_POWER_COLLAPSE
        bool "Enable standalone power collapse"
        default n
 
+choice
+	prompt "CPU Hot Plug"
+	default MSM_MPDECISION
+config MSM_MPDECISION
+	bool "stock mp decision"
+config MSM_MPDECISION_SHOWP
+	bool "mp decision by showp"
+endchoice
+
 config MSM_GSBI9_UART
 	bool "Enable GSBI9 UART device"
 	default n
@@ -2593,7 +2602,7 @@ config MSM_L2_ERP_2BIT_PANIC
 
 config MSM_DCVS
 	bool "Use MSM DCVS for CPU/GPU Frequency control"
-	depends on MSM_SCM
+	depends on MSM_SCM && !MSM_MPDECISION_SHOWP
 	help
 	  Enable support for MSM DCVS to control all CPU and GPU core frequencies.
 	  The DCVS manager allows idle driver to feed the idle information to the

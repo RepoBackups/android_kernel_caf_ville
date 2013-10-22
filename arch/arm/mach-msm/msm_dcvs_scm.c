@@ -212,7 +212,7 @@ int msm_dcvs_scm_set_power_params(uint32_t core_id,
 	return ret;
 }
 EXPORT_SYMBOL(msm_dcvs_scm_set_power_params);
-
+#ifndef CONFIG_MSM_MPDECISION_SHOWP 
 int msm_dcvs_scm_event(uint32_t core_id,
 		enum msm_dcvs_scm_event event_id,
 		uint32_t param0, uint32_t param1,
@@ -232,3 +232,4 @@ int msm_dcvs_scm_event(uint32_t core_id,
 	return ret;
 }
 EXPORT_SYMBOL(msm_dcvs_scm_event);
+#endif
