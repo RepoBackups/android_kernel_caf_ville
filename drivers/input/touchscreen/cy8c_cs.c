@@ -25,6 +25,9 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/workqueue.h>
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+#include <linux/cm3629.h>
+#endif
 
 #define CY8C_I2C_RETRY_TIMES 	(10)
 #define CY8C_KEYLOCKTIME    	(1500)
@@ -83,6 +86,7 @@ extern uint8_t touchscreen_is_on(void) {
 #define S2W_CONT_TOUT 250
 #define DEBUG 0
 
+int pocket_detect = 1; 
 int s2w_switch = 1;
 int s2w_h[2][3] = {{0, 0, 0}, {0, 0, 0}};
 cputime64_t s2w_t[3] = {0, 0, 0};
@@ -115,15 +119,25 @@ EXPORT_SYMBOL(sweep2wake_setdev);
 
 static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 
-	input_report_key(sweep2wake_pwrdev, KEY_POWER, 1);
-	input_sync(sweep2wake_pwrdev);
-	msleep(80);
-	input_report_key(sweep2wake_pwrdev, KEY_POWER, 0);
-	input_sync(sweep2wake_pwrdev);
-	msleep(80);
+	int pocket_mode = 0;
+  
+	if (scr_suspended == true && pocket_detect == 1)
+		pocket_mode = power_key_check_in_pocket();
 
-	mutex_unlock(&pwrlock);
-	return;
+	if (!pocket_mode || pocket_detect == 0) { 
+
+	   	if (!mutex_trylock(&pwrlock))
+			return;
+		input_report_key(sweep2wake_pwrdev, KEY_POWER, 1);
+		input_sync(sweep2wake_pwrdev);
+		msleep(80);
+		input_report_key(sweep2wake_pwrdev, KEY_POWER, 0);
+		input_sync(sweep2wake_pwrdev);
+		msleep(80);
+
+		mutex_unlock(&pwrlock);
+		return;
+	}
 }
 static DECLARE_WORK(sweep2wake_presspwr_work, sweep2wake_presspwr);
 
@@ -189,7 +203,7 @@ static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
 	}
 #endif
 
-	if (scr_suspended) {
+	if (scr_suspended && s2w_switch == 1) {
 		if (((s2w_h[0][2] == 0) && (s2w_h[1][2] == 1) && ((s2w_t[1]-s2w_t[2]) < S2W_CONT_TOUT)) &&
 			((s2w_h[0][1] == 0) && (s2w_h[1][1] == 2) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 			((s2w_h[0][0] == 0) && (s2w_h[1][0] == 4))) {
@@ -526,6 +540,29 @@ static ssize_t cy8c_sweep2wake_dump(struct device *dev,
 
 static DEVICE_ATTR(sweep2wake, (S_IWUSR|S_IRUGO),
 	cy8c_sweep2wake_show, cy8c_sweep2wake_dump);
+
+static ssize_t cy8c_pocket_detect_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+
+	count += sprintf(buf, "%d\n", pocket_detect);
+
+	return count;
+}
+
+static ssize_t cy8c_pocket_detect_dump(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (buf[0] >= '0' && buf[0] <= '3' && buf[1] == '\n')
+		if (pocket_detect != buf[0] - '0')
+			pocket_detect = buf[0] - '0';
+
+	return count;
+}
+
+static DEVICE_ATTR(pocket_detect, (S_IWUSR|S_IRUGO),
+	cy8c_pocket_detect_show, cy8c_pocket_detect_dump);
 #endif
 
 static struct kobject *android_touchkey_kobj;
@@ -541,6 +578,11 @@ static int cy8c_touchkey_sysfs_init(void)
 	}
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 	ret = sysfs_create_file(android_touchkey_kobj, &dev_attr_sweep2wake.attr);
+	if (ret) {
+		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
+		return ret;
+	}
+	ret = sysfs_create_file(android_touchkey_kobj, &dev_attr_pocket_detect.attr);
 	if (ret) {
 		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
 		return ret;
@@ -593,6 +635,7 @@ static void cy8c_touchkey_sysfs_deinit(void)
 {
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_sweep2wake.attr);
+	sysfs_remove_file(android_touchkey_kobj, &dev_attr_pocket_detect.attr);
 #endif
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_gpio.attr);
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_read.attr);
@@ -1010,9 +1053,8 @@ static int cy8c_cs_suspend(struct i2c_client *client, pm_message_t mesg)
 	enable_irq_wake(client->irq);
 #endif
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-	if (s2w_switch > 0) {
+	if (s2w_switch == 1) {
 		//screen off, enable_irq_wake
-		//scr_suspended = true;
 		enable_irq_wake(client->irq);
 	}
 #endif
