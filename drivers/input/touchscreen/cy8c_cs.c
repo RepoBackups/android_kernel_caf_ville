@@ -119,25 +119,15 @@ EXPORT_SYMBOL(sweep2wake_setdev);
 
 static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 
-	int pocket_mode = 0;
-  
-	if (scr_suspended == true && pocket_detect == 1)
-		pocket_mode = power_key_check_in_pocket();
+	input_report_key(sweep2wake_pwrdev, KEY_POWER, 1);
+	input_sync(sweep2wake_pwrdev);
+	msleep(80);
+	input_report_key(sweep2wake_pwrdev, KEY_POWER, 0);
+	input_sync(sweep2wake_pwrdev);
+	msleep(80);
 
-	if (!pocket_mode || pocket_detect == 0) { 
-
-	   	if (!mutex_trylock(&pwrlock))
-			return;
-		input_report_key(sweep2wake_pwrdev, KEY_POWER, 1);
-		input_sync(sweep2wake_pwrdev);
-		msleep(80);
-		input_report_key(sweep2wake_pwrdev, KEY_POWER, 0);
-		input_sync(sweep2wake_pwrdev);
-		msleep(80);
-
-		mutex_unlock(&pwrlock);
-		return;
-	}
+	mutex_unlock(&pwrlock);
+	return;
 }
 static DECLARE_WORK(sweep2wake_presspwr_work, sweep2wake_presspwr);
 
@@ -174,6 +164,9 @@ static void s2w_reset(void) {
 }
 
 static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
+
+	int pocket_mode = 0;
+
 	//preserve old entries
 	s2w_t[2] = s2w_t[1];
 	s2w_t[1] = s2w_t[0];
@@ -186,6 +179,11 @@ static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
 	s2w_h[0][2] = s2w_h[0][1];
 	s2w_h[0][1] = s2w_h[0][0];
 	s2w_h[0][0] = btn_state;
+
+	if (scr_suspended == true && pocket_detect == 1)
+		pocket_mode = power_key_check_in_pocket();
+	if (pocket_mode && pocket_detect == 1) 
+		return;
 
 	if ((btn_state == 4) || ((btn_state == 3) &&
 		((s2w_h[0][1] != 0) && ((s2w_h[1][1] != 1) || (s2w_h[1][1] != 4))))) {
@@ -1053,7 +1051,7 @@ static int cy8c_cs_suspend(struct i2c_client *client, pm_message_t mesg)
 	enable_irq_wake(client->irq);
 #endif
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-	if (s2w_switch == 1) {
+	if (s2w_switch > 0) {
 		//screen off, enable_irq_wake
 		enable_irq_wake(client->irq);
 	}
