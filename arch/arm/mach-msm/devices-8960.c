@@ -3231,6 +3231,8 @@ static struct msm_dcvs_freq_entry grp3d_freq[] = {
 	{0, 950, 0, 0, 0},
 #ifdef CONFIG_GPU_OVERCLOCK
 	{0, 1200, 0, 0, 0},
+	{0, 1200, 0, 0, 0},
+	{0, 1200, 0, 0, 0},
 	{0, 1200, 1, 100, 100},
 #else
 	{0, 1200, 1, 100, 100},
@@ -3240,6 +3242,8 @@ static struct msm_dcvs_freq_entry grp3d_freq[] = {
 static struct msm_dcvs_freq_entry grp2d_freq[] = {
 	{0, 900, 0, 0, 0},
 #ifdef CONFIG_GPU_OVERCLOCK
+	{0, 950, 0, 0, 0},
+	{0, 950, 0, 0, 0},
 	{0, 950, 0, 0, 0},
 	{0, 950, 1, 100, 100},
 #else
@@ -3537,7 +3541,17 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.pwrlevel = {
 #ifdef CONFIG_GPU_OVERCLOCK
 		{
+			.gpu_freq = 512000000,
+			.bus_freq = 4,
+			.io_fraction = 0,
+		},
+		{
 			.gpu_freq = 480000000,
+			.bus_freq = 4,
+			.io_fraction = 0,
+		},
+		{
+			.gpu_freq = 450000000,
 			.bus_freq = 4,
 			.io_fraction = 0,
 		},
@@ -3567,7 +3581,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 			.bus_freq = 0,
 		},
 	},
-	.init_level = 1,
+	.init_level = 2,
 	.num_levels = ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
@@ -3623,6 +3637,14 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.pwrlevel = {
 #ifdef CONFIG_GPU_OVERCLOCK
 		{
+			.gpu_freq = 320000000,
+			.bus_freq = 2,
+		},
+		{
+			.gpu_freq = 300000000,
+			.bus_freq = 2,
+		},
+		{
 			.gpu_freq = 266667000,
 			.bus_freq = 2,
 		},
@@ -3640,7 +3662,7 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 			.bus_freq = 0,
 		},
 	},
-	.init_level = 0,
+	.init_level = 3,
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
@@ -3695,6 +3717,14 @@ static struct resource kgsl_2d1_resources[] = {
 static struct kgsl_device_platform_data kgsl_2d1_pdata = {
 	.pwrlevel = {
 #ifdef CONFIG_GPU_OVERCLOCK
+		{
+			.gpu_freq = 320000000,
+			.bus_freq = 2,
+		},
+		{
+			.gpu_freq = 300000000,
+			.bus_freq = 2,
+		},
 		{
 			.gpu_freq = 266667000,
 			.bus_freq = 2,

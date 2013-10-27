@@ -3408,7 +3408,9 @@ static struct clk_freq_tbl clk_tbl_gfx2d[] = {
 	F_GFX2D(177778000, pll2, 2,  9),
 	F_GFX2D(200000000, pll2, 1,  4),
 #ifdef CONFIG_GPU_OVERCLOCK
-	F_GFX2D(266667000, pll2, 1,  3),
+	F_GFX2D(266667000, pll2, 2,  7),
+	F_GFX2D(300000000, pll2, 1,  3),
+	F_GFX2D(320000000, pll2, 1,  4),
 #endif
 	F_END
 };
@@ -3454,7 +3456,7 @@ static struct rcg_clk gfx2d0_clk = {
 		.flags = CLKFLAG_SKIP_HANDOFF,
 #ifdef CONFIG_GPU_OVERCLOCK
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
-				  HIGH, 266667000),
+				  HIGH, 320000000),
 #else
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
 				  HIGH, 200000000),
@@ -3504,7 +3506,7 @@ static struct rcg_clk gfx2d1_clk = {
 		.flags = CLKFLAG_SKIP_HANDOFF,
 #ifdef CONFIG_GPU_OVERCLOCK
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
-				  HIGH, 266667000),
+				  HIGH, 320000000),
 #else
 		VDD_DIG_FMAX_MAP3(LOW,  100000000, NOMINAL, 200000000,
 				  HIGH, 200000000),
@@ -3564,7 +3566,9 @@ static struct clk_freq_tbl clk_tbl_gfx3d_8960[] = {
 	F_GFX3D(320000000, pll2, 2,  5),
 	F_GFX3D(400000000, pll2, 1,  2),
 #ifdef CONFIG_GPU_OVERCLOCK
-	F_GFX3D(480000000, pll2, 2,  5),
+	F_GFX3D(450000000, pll2, 3,  8),
+	F_GFX3D(480000000, pll2, 3,  8),
+	F_GFX3D(512000000, pll2, 3,  8), 
 #endif
 	F_END
 };
@@ -3661,7 +3665,7 @@ static struct rcg_clk gfx3d_clk = {
 		.ops = &clk_ops_rcg,
 #ifdef CONFIG_GPU_OVERCLOCK
 		VDD_DIG_FMAX_MAP3(LOW,  128000000, NOMINAL, 300000000,
-				  HIGH, 480000000),
+				  HIGH, 512000000),
 #else
 		VDD_DIG_FMAX_MAP3(LOW,  128000000, NOMINAL, 300000000,
 				  HIGH, 400000000),
