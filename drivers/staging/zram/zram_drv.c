@@ -267,7 +267,7 @@ static int zram_bvec_read(struct zram *zram, struct bio_vec *bvec,
 	int ret;
 	size_t clen;
 	struct page *page;
-	struct zobj_header *zheader;
+	//struct zobj_header *zheader;
 	unsigned char *user_mem, *cmem, *uncmem = NULL;
 
 	page = bvec->bv_page;
@@ -308,7 +308,7 @@ static int zram_bvec_read(struct zram *zram, struct bio_vec *bvec,
 	cmem = zs_map_object(zram->mem_pool, zram->table[index].handle);
 
 	ret = zram_comp_op(ZRAM_COMPOP_DECOMPRESS, cmem,
-        zram->table[index].size, mem, &clen);
+        zram->table[index].size, uncmem, &clen);
 
 	if (is_partial_io(bvec)) {
 		memcpy(user_mem + bvec->bv_offset, uncmem + offset,
@@ -335,7 +335,7 @@ static int zram_read_before_write(struct zram *zram, char *mem, u32 index)
 {
 	int ret;
 	size_t clen = PAGE_SIZE;
-	struct zobj_header *zheader;
+	//struct zobj_header *zheader;
 	unsigned char *cmem;
 
 	if (zram_test_flag(zram, index, ZRAM_ZERO) ||
@@ -353,9 +353,8 @@ static int zram_read_before_write(struct zram *zram, char *mem, u32 index)
 		return 0;
 	}
 
-	ret = lzo1x_decompress_safe(cmem + sizeof(*zheader),
-				    zram->table[index].size,
-				    mem, &clen);
+	ret = zram_comp_op(ZRAM_COMPOP_DECOMPRESS, cmem,
+		zram->table[index].size, mem, &clen);
 	zs_unmap_object(zram->mem_pool, zram->table[index].handle);
 
 	/* Should NEVER happen. Return bio error if it does. */
