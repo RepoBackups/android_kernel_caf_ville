@@ -26,6 +26,14 @@ static int msm_sharedmem_probe(struct platform_device *pdev)
 	struct resource *clnt_res = NULL;
 
 	/* Get the addresses from platform-data */
+<<<<<<< HEAD
+=======
+	if (!pdev->dev.of_node) {
+		pr_err("Node not found\n");
+		ret = -ENODEV;
+		goto out;
+	}
+>>>>>>> 7f5fe61... uio: msm_sharedmem: Add new device driver for sharedmemory access
 	clnt_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!clnt_res) {
 		pr_err("resource not found\n");
