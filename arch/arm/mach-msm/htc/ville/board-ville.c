@@ -2775,21 +2775,12 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-        .sensor_id = 0,
-        .poll_ms = 150,
-        .shutdown_temp = 78,
-
-        .allowed_max_high = 74,
-        .allowed_max_low = 70,
-        .allowed_max_freq = 384000,
-
-        .allowed_mid_high = 81,
-        .allowed_mid_low = 66,
-        .allowed_mid_freq = 810000,
-
-        .allowed_low_high = 69,
-        .allowed_low_low = 63,
-        .allowed_low_freq = 1350000,
+	.sensor_id = 0,
+	.poll_ms = 1000,
+	.limit_temp_degC = 60,
+	.temp_hysteresis_degC = 10,
+//	.limit_freq = 918000,
+	.freq_step = 2,
 };
 
 #ifdef CONFIG_MSM_FAKE_BATTERY
@@ -2891,7 +2882,6 @@ static struct platform_device *common_devices[] __initdata = {
 #endif
 	&msm8960_iommu_domain_device,
 	&msm_tsens_device,
-	&msm8960_pc_cntr,
 	&msm8960_cpu_slp_status,
 #ifdef CONFIG_HTC_BATT_8960
 	&htc_battery_pdev,
@@ -3574,11 +3564,13 @@ static void __init ville_init(void)
 	if (cpu_is_msm8960ab())
 		msm8960ab_update_krait_spm();
 	if (cpu_is_krait_v3()) {
-		msm_pm_set_tz_retention_flag(0);
+		struct msm_pm_init_data_type *pdata =
+			msm8960_pm_8x60.dev.platform_data;
+		pdata->retention_calls_tz = false;
 		msm8960ab_update_retention_spm();
-	} else {
-		msm_pm_set_tz_retention_flag(1);
 	}
+	platform_device_register(&msm8960_pm_8x60);
+
 	msm_spm_init(msm_spm_data, ARRAY_SIZE(msm_spm_data));
 	msm_spm_l2_init(msm_spm_l2_data);
 	msm8960_init_buses();
