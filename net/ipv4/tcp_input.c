@@ -4417,7 +4417,7 @@ static void tcp_sack_remove(struct tcp_sock *tp)
 	for (this_sack = 0; this_sack < num_sacks;) {
 		/* Check if the start of the sack is covered by RCV.NXT. */
 		if (!before(tp->rcv_nxt, sp->start_seq)) {
-			int i;
+			unsigned int i;
 
 			/* RCV.NXT must cover all the block! */
 			WARN_ON(before(tp->rcv_nxt, sp->end_seq));

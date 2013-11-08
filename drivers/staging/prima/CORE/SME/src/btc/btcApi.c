@@ -239,10 +239,10 @@ static VOS_STATUS btcSendBTEvent(tpAniSirGlobal pMac, tpSmeBtEvent pBtEvent)
     \param  pBtEvent -  Pointer to a caller allocated object of type tSmeBtEvent.
                         Caller owns the memory and is responsible for freeing it.
     \return VOS_STATUS
-            VOS_STATUS_E_FAILURE – BT Event not passed to HAL. This can happen
+            VOS_STATUS_E_FAILURE \96 BT Event not passed to HAL. This can happen
                                    if driver has not yet been initialized or if BTC
                                    Events Layer has been disabled.
-            VOS_STATUS_SUCCESS   – BT Event passed to HAL
+            VOS_STATUS_SUCCESS   \96 BT Event passed to HAL
   ---------------------------------------------------------------------------*/
 VOS_STATUS btcSignalBTEvent (tHalHandle hHal, tpSmeBtEvent pBtEvent)
 {
@@ -1079,7 +1079,7 @@ static VOS_STATUS btcDeferDisconnectEventForACL( tpAniSirGlobal pMac, tpSmeBtEve
     tpSmeBtAclEventHist pAclEventHist;
     tpSmeBtAclModeChangeEventHist pModeChangeEventHist;
     v_BOOL_t fDone = VOS_FALSE;
-    int i;
+    unsigned int i;
     pAclEventHist = btcFindAclEventHist( pMac, NULL, 
                                 pEvent->uEventParam.btDisconnect.connectionHandle );
     if(pAclEventHist)
@@ -1163,7 +1163,7 @@ static VOS_STATUS btcDeferDisconnectEventForSync( tpAniSirGlobal pMac, tpSmeBtEv
     tpSmeBtSyncEventHist pSyncEventHist;
     tpSmeBtSyncUpdateHist pSyncUpdateHist;
     v_BOOL_t fDone = VOS_FALSE;
-    int i;
+    unsigned int i;
     pSyncEventHist = btcFindSyncEventHist( pMac, NULL, 
                                 pEvent->uEventParam.btDisconnect.connectionHandle );
     if(pSyncEventHist)
