@@ -138,10 +138,12 @@ static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 static DECLARE_WORK(sweep2wake_presspwr_work, sweep2wake_presspwr);
 
 void sweep2wake_pwrtrigger(void) {
+	if (scr_suspended && pocket_detect == 1 && power_key_check_in_pocket())
+		return;
+
 	if (mutex_trylock(&pwrlock)) {
 		schedule_work(&sweep2wake_presspwr_work);
 	}
-	return;
 }
 
 static int population_counter(int x) {
@@ -204,8 +206,6 @@ static void dt2w_func(int btn_state, int btn_id, cputime64_t dtrigger_time) {
 
 static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
 
-	int pocket_mode = 0;
-
 	//preserve old entries
 	s2w_t[2] = s2w_t[1];
 	s2w_t[1] = s2w_t[0];
@@ -218,11 +218,6 @@ static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
 	s2w_h[0][2] = s2w_h[0][1];
 	s2w_h[0][1] = s2w_h[0][0];
 	s2w_h[0][0] = btn_state;
-
-	if (scr_suspended == true && pocket_detect == 1)
-		pocket_mode = power_key_check_in_pocket();
-	if (pocket_mode && pocket_detect == 1) 
-		return;
 
 	if ((btn_state == 4) || ((btn_state == 3) &&
 		((s2w_h[0][1] != 0) && ((s2w_h[1][1] != 1) || (s2w_h[1][1] != 4))))) {
