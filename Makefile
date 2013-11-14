@@ -352,13 +352,19 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 
-MODFLAGS	= -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math  -fsingle-precision-constant -mcpu=cortex-a15 -marm -mfpu=neon-vfpv4 -ftree-vectorize -mvectorize-with-neon-quad -funroll-loops -mvectorize-with-neon-quad
+CUSTOM_FLAG	= -fgcse-lm -fgcse-sm -fsched-spec-load -fgcse-after-reload \
+		  -fforce-addr -ffast-math  -fsingle-precision-constant \
+		  -mcpu=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize  \
+		  -mvectorize-with-neon-quad \
+		  -funroll-loops -mvectorize-with-neon-quad -pipe \
+		  #-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
+		  -munaligned-access -fpredictive-commoning
 
-CFLAGS_MODULE   = -DMODULE -fno-pic $(MODFLAGS)
-AFLAGS_MODULE   = -DMODULE $(MODFLAGS)
+CFLAGS_MODULE   = -DMODULE -fno-pic $(CUSTOM_FLAG)
+AFLAGS_MODULE   = -DMODULE $(CUSTOM_FLAG)
 LDFLAGS_MODULE  = 
-CFLAGS_KERNEL	= $(MODFLAGS)
-AFLAGS_KERNEL	= $(MODFLAGS)
+CFLAGS_KERNEL	= $(CUSTOM_FLAG)
+AFLAGS_KERNEL	= $(CUSTOM_FLAG)
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
 
@@ -371,11 +377,6 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-CUSTOM_FLAG = -munaligned-access -mtune=cortex-a15 -mcpu=cortex-a15 \
-	-fpredictive-commoning -fgcse-after-reload -ftree-vectorize \
-	-fipa-cp-clone -fsingle-precision-constant -pipe \
-	-funswitch-loops
-
 KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wmaybe-uninitialized\
 	-fno-strict-aliasing -fno-common \
 	-Werror-implicit-function-declaration \
@@ -384,11 +385,11 @@ KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -Wmaybe-uninit
 
 # -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block
 
-KBUILD_AFLAGS_KERNEL := $(CUSTOM_FLAG)
-KBUILD_CFLAGS_KERNEL := $(CUSTOM_FLAG)
+KBUILD_AFLAGS_KERNEL := $(KBUILD_CFLAGS)
+KBUILD_CFLAGS_KERNEL := $(KBUILD_CFLAGS)
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_AFLAGS_MODULE  := -DMODULE $(CUSTOM_FLAG)
-KBUILD_CFLAGS_MODULE  := -DMODULE $(CUSTOM_FLAG)
+KBUILD_AFLAGS_MODULE  := -DMODULE $(KBUILD_CFLAGS)
+KBUILD_CFLAGS_MODULE  := -DMODULE $(KBUILD_CFLAGS)
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
