@@ -7,6 +7,9 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+
+#include <linux/const.h>
+
 #ifndef _ASM_PGTABLE_2LEVEL_HWDEF_H
 #define _ASM_PGTABLE_2LEVEL_HWDEF_H
 

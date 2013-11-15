@@ -6,6 +6,8 @@
  */
 #include <asm/asm-offsets.h>
 #include <asm/thread_info.h>
+#include <asm/pgtable-2level-hwdef.h>
+#include <asm/pgtable-2level.h>
 
 /*
  * vma_vm_mm - get mm pointer from vma pointer (vma->vm_mm)
