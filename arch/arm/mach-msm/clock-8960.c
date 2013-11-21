@@ -3408,9 +3408,9 @@ static struct clk_freq_tbl clk_tbl_gfx2d[] = {
 	F_GFX2D(177778000, pll2, 2,  9),
 	F_GFX2D(200000000, pll2, 1,  4),
 #ifdef CONFIG_GPU_OVERCLOCK
-	F_GFX2D(266667000, pll2, 2,  7),
-	F_GFX2D(300000000, pll2, 1,  3),
-	F_GFX2D(320000000, pll2, 1,  4),
+	F_GFX2D(266667000, pll2, 1,  3),
+	F_GFX2D(300000000, pll2, 3,  8),
+	F_GFX2D(320000000, pll2, 2,  5),
 #endif
 	F_END
 };
@@ -3566,9 +3566,9 @@ static struct clk_freq_tbl clk_tbl_gfx3d_8960[] = {
 	F_GFX3D(320000000, pll2, 2,  5),
 	F_GFX3D(400000000, pll2, 1,  2),
 #ifdef CONFIG_GPU_OVERCLOCK
-	F_GFX3D(450000000, pll2, 3,  8),
-	F_GFX3D(480000000, pll2, 3,  8),
-	F_GFX3D(512000000, pll2, 3,  8), 
+	F_GFX3D(436364000, pll2, 6, 11),
+	F_GFX3D(480000000, pll3, 1,  4),
+	F_GFX3D(512000000, pll2, 3,  4), 
 #endif
 	F_END
 };
