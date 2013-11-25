@@ -281,8 +281,24 @@ source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 config ASYNC_FSYNC
 	bool "asynchronous fsync"
+=======
+config ASYNC_FSYNC
+	bool
+	string "asynchronous fsync"
+	default y
+
+config DYNAMIC_FSYNC
+	bool "dynamic file sync control"
+	default n
+	help
+	  An experimental file sync control using Android's early suspend / late resume drivers
+
+config AIO_OPTIMIZATION
+	bool "AIO kernel optimization patches"
+>>>>>>> 6833cc5... Asynchronous Fsync: initial extraction of Async Fsync from HTC
 	default y
 
 config EXFAT_FS
