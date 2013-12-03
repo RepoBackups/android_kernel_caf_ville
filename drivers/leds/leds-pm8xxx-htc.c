@@ -30,7 +30,6 @@
 #include <linux/input.h>
 #include <linux/input/cy8c_cs.h>
 #endif
-
 #define SSBI_REG_ADDR_DRV_KEYPAD	0x48
 #define PM8XXX_DRV_KEYPAD_BL_MASK	0xf0
 #define PM8XXX_DRV_KEYPAD_BL_SHIFT	0x04
@@ -80,11 +79,9 @@ static int virtual_key_state;
 static int current_blink = 0;
 static int lut_coefficient = 100;
 static int dutys_array[64];
-
 #ifdef CONFIG_BLN
 static int bln = 1; 
 #endif
-
 u8 pm8xxxx_led_pwm_mode(int flag)
 {
 	u8 mode = 0;
@@ -128,7 +125,6 @@ void pm8xxx_led_current_set_for_key(int brightness_key)
 #ifdef CONFIG_BLN
 	printk("[BB] current_set_for_key  %d \n", brightness_key); 
 #endif
-
 	if (brightness_key) {
 		flag_hold_virtual_key = 1;
 		level = (40 << PM8XXX_DRV_LED_CTRL_SHIFT) & PM8XXX_DRV_LED_CTRL_MASK;
@@ -169,7 +165,6 @@ void pm8xxx_led_current_set_for_key(int brightness_key)
 
 	}
 }
-
 #ifdef CONFIG_BLN
 struct led_classdev *led_cdev_buttons = 0;
 static int buttons_led_is_blinking = 0;
@@ -319,7 +314,6 @@ static void pm8xxx_buttons_blink(int on)
 	}
 }
 #endif
-
 static void pm8xxx_led_gpio_set(struct led_classdev *led_cdev, enum led_brightness brightness)
 {
 	int rc, offset;
@@ -477,7 +471,6 @@ static ssize_t pm8xxx_bln_store(struct device *dev,
 
 static DEVICE_ATTR(bln, 0644, pm8xxx_bln_show, pm8xxx_bln_store);
 #endif
-
 static ssize_t pm8xxx_led_blink_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
@@ -929,6 +922,7 @@ static int __devinit pm8xxx_led_probe(struct platform_device *pdev)
 			LED_ERR("unable to register led %d,ret=%d\n", led_dat->id, ret);
 			goto err_register_led_cdev;
 		}
+
 #ifdef CONFIG_BLN
 		// blink buttons
 		if (led_dat->id == PM8XXX_ID_LED_0)
