@@ -625,7 +625,7 @@ static struct kobject *android_touchkey_kobj;
 static int cy8c_touchkey_sysfs_init(void)
 {
 	int ret;
-	android_touchkey_kobj = kobject_create_and_add("android_key", NULL);
+	android_touchkey_kobj = kobject_create_and_add("android_touch", NULL);
 	if (android_touchkey_kobj == NULL) {
 		printk(KERN_ERR "%s: subsystem_register failed\n", __func__);
 		ret = -ENOMEM;

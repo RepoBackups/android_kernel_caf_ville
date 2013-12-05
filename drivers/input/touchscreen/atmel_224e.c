@@ -755,7 +755,7 @@ static struct kobject *android_touch_kobj;
 static int atmel_touch_sysfs_init(void)
 {
 	int ret;
-	android_touch_kobj = kobject_create_and_add("android_touch", NULL);
+	android_touch_kobj = kobject_create_and_add("android_touchscreen", NULL);
 	if (android_touch_kobj == NULL) {
 		printk(KERN_ERR "[TP]TOUCH_ERR: subsystem_register failed\n");
 		ret = -ENOMEM;
