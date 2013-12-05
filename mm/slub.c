@@ -1514,19 +1514,15 @@ static inline void *acquire_slab(struct kmem_cache *s,
 		freelist = page->freelist;
 		counters = page->counters;
 		new.counters = counters;
-		if (mode) {
+		if (mode)
 			new.inuse = page->objects;
-			new.freelist = NULL;
-		} else {
-			new.freelist = freelist;
-		}
 
 		VM_BUG_ON(new.frozen);
 		new.frozen = 1;
 
 	} while (!__cmpxchg_double_slab(s, page,
 			freelist, counters,
-			new.freelist, new.counters,
+			NULL, new.counters,
 			"lock and freeze"));
 
 	remove_partial(n, page);
@@ -1568,6 +1564,7 @@ static void *get_partial_node(struct kmem_cache *s,
 			object = t;
 			available =  page->objects - page->inuse;
 		} else {
+			page->freelist = t;
 			available = put_cpu_partial(s, page, 0);
 			stat(s, CPU_PARTIAL_NODE);
 		}
@@ -2635,7 +2632,7 @@ EXPORT_SYMBOL(kmem_cache_free);
  * take the list_lock.
  */
 static int slub_min_order;
-static int slub_max_order;
+static int slub_max_order = PAGE_ALLOC_COSTLY_ORDER;
 static int slub_min_objects;
 
 /*
@@ -5529,3 +5526,4 @@ static int __init slab_proc_init(void)
 }
 module_init(slab_proc_init);
 #endif /* CONFIG_SLABINFO */
+
