@@ -469,7 +469,7 @@ static ssize_t pm8xxx_bln_store(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(bln, 0644, pm8xxx_bln_show, pm8xxx_bln_store);
+static DEVICE_ATTR(blink_buttons, 0644, pm8xxx_bln_show, pm8xxx_bln_store);
 #endif
 static ssize_t pm8xxx_led_blink_show(struct device *dev,
 					struct device_attribute *attr,
@@ -929,7 +929,7 @@ static int __devinit pm8xxx_led_probe(struct platform_device *pdev)
 		{
 			// storing buttons light dev for blinking
 			led_cdev_buttons = &led_dat->cdev;
-			ret = device_create_file(led_dat->cdev.dev, &dev_attr_bln);
+			ret = device_create_file(led_dat->cdev.dev, &dev_attr_blink_buttons);
 			if (ret < 0) {
 				LED_ERR("%s: Failed to create %d attr currents\n", __func__, i);
 				goto err_register_attr_currents;
