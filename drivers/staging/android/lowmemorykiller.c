@@ -51,6 +51,8 @@
 #include <linux/freezer.h>
 #include <asm/atomic.h>
 
+#include "../../../mm/internal.h"
+
 #define MIN_FREESWAP_PAGES 8192 /* 32MB */
 #define MIN_RECLAIM_PAGES 512  /* 2MB */
 #define MIN_CSWAP_INTERVAL (10*HZ)  /* 10 senconds */
@@ -417,7 +419,7 @@ void could_cswap(void)
 	if (atomic_read(&s_reclaim.lmk_running) == 1 || atomic_read(&kswapd_thread_on) == 1)
 		return;
 
-	if (nr_swap_pages < minimum_freeswap_pages)
+	if (get_nr_swap_pages() < minimum_freeswap_pages)
 		return;
 
 	if (unlikely(s_reclaim.kcompcached == NULL))
@@ -492,7 +494,7 @@ static int soft_reclaim(void)
 			struct zone *zone = pgdat->node_zones + i;
 			if (!populated_zone(zone))
 				continue;
-			if (zone->all_unreclaimable)
+			if (!zone_reclaimable(zone))
 				continue;
 
 			nr_soft_scanned = 0;
