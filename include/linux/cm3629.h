@@ -180,5 +180,5 @@ struct cm3629_platform_data {
 	uint8_t dark_level;
 };
 
-int power_key_check_in_pocket(void);
+int power_key_check_in_pocket_no_light(void);
 #endif
