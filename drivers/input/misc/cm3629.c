@@ -38,7 +38,7 @@
 #include <linux/jiffies.h>
 #include <mach/board.h>
 
-#define D(x...) pr_info(x)
+#define D(x...) if(log_enable)pr_info(x)
 
 #define I2C_RETRY_COUNT 10
 
@@ -51,6 +51,8 @@
 #define POLLING_DELAY		200
 #define TH_ADD			3
 #endif
+
+bool log_enable = false;
 static int record_init_fail = 0;
 static void sensor_irq_do_work(struct work_struct *work);
 static DECLARE_WORK(sensor_irq_work, sensor_irq_do_work);
@@ -143,7 +145,6 @@ static uint8_t ps2_canc_set;
 static uint8_t ps1_offset_adc;
 static uint8_t ps2_offset_adc;
 static struct cm3629_info *lp_info;
-int enable_cm3629_log;
 int f_cm3629_level = -1;
 static struct mutex als_enable_mutex, als_disable_mutex, als_get_adc_mutex;
 static struct mutex ps_enable_mutex;
@@ -208,8 +209,7 @@ static int I2C_TxData(uint16_t slaveAddr, uint8_t *txData, int length)
 		if (i2c_transfer(lp_info->i2c_client->adapter, msg, 1) > 0)
 			break;
 
-		D("[PS][cm3629 warning] %s, i2c err, slaveAddr 0x%x, register 0x%x, value 0x%x, ISR gpio%d, record_init_fail %d\n",
-				__func__, slaveAddr, txData[0], txData[1], lpi->intr_pin, record_init_fail);
+		D("[PS][cm3629 warning] %s, i2c err, slaveAddr 0x%x, register 0x%x, value 0x%x, ISR gpio%d, record_init_fail %d\n",__func__, slaveAddr, txData[0], txData[1], lpi->intr_pin, record_init_fail);
 
 		usleep(10);
 	}
@@ -233,16 +233,14 @@ static int _cm3629_I2C_Read2(uint16_t slaveAddr,
 		return -EFAULT;
 
 	if (length > 2) {
-		pr_err(
-			"[PS_ERR][cm3629 error]%s: length %d> 2: \n",
+		pr_err("[PS_ERR][cm3629 error]%s: length %d> 2: \n",
 			__func__, length);
 		return ret;
 	}
 	buffer[0] = cmd;
 	ret = I2C_RxData_2(buffer, length);
 	if (ret < 0) {
-		pr_err(
-			"[PS_ERR][cm3629 error]%s: I2C_RxData fail, slave addr: 0x%x\n",
+		pr_err("[PS_ERR][cm3629 error]%s: I2C_RxData fail, slave addr: 0x%x\n",
 			__func__, slaveAddr);
 		return ret;
 	}
@@ -259,8 +257,7 @@ static int _cm3629_I2C_Write2(uint16_t SlaveAddress,
 	char buffer[3];
 	int ret = 0;
 	if (length > 3) {
-		pr_err(
-			"[PS_ERR][cm3629 error]%s: length %d> 2: \n",
+		pr_err("[PS_ERR][cm3629 error]%s: length %d> 2: \n",
 			__func__, length);
 		return ret;
 	}
@@ -305,8 +302,7 @@ static int get_ls_adc_value(uint32_t *als_step, bool resume)
 		ALS_config_cmd, cmd, 3);
 
 	if (ret < 0) {
-		pr_err(
-			"[LS][cm3629 error]%s: _cm3629_I2C_Write_Byte fail\n",
+		pr_err("[LS][cm3629 error]%s: _cm3629_I2C_Write_Byte fail\n",
 			__func__);
 		return -EIO;
 	}
@@ -315,8 +311,7 @@ static int get_ls_adc_value(uint32_t *als_step, bool resume)
 
 	ret = _cm3629_I2C_Read2(lpi->cm3629_slave_address, ALS_data, cmd, 2);
 	if (ret < 0) {
-		pr_err(
-			"[LS][cm3629 error]%s: _cm3629_I2C_Read_Byte  fail\n",
+		pr_err("[LS][cm3629 error]%s: _cm3629_I2C_Read_Byte  fail\n",
 			__func__);
 		return -EIO;
 	}
@@ -329,7 +324,6 @@ static int get_ls_adc_value(uint32_t *als_step, bool resume)
 
 	D("[LS][cm3629] %s: raw adc = 0x%X, ls_calibrate = %d\n",
 		__func__, *als_step, lpi->ls_calibrate);
-
 
 	if (!lpi->ls_calibrate) {
 		*als_step = (*als_step) * lpi->als_gadc / lpi->als_kadc;
@@ -394,9 +388,7 @@ static int set_lsensor_range(uint16_t low_thd, uint16_t high_thd)
 static void report_near_do_work(struct work_struct *w)
 {
 	struct cm3629_info *lpi = lp_info;
-
 	D("[PS][cm3629]  %s: delay %dms, report proximity NEAR\n", __func__, lpi->ps_delay_time);
-
 	input_report_abs(lpi->ps_input_dev, ABS_DISTANCE, 0);
 	input_sync(lpi->ps_input_dev);
 	blocking_notifier_call_chain(&psensor_notifier_list, 2, NULL);
@@ -467,7 +459,6 @@ static void report_psensor_input_event(struct cm3629_info *lpi, int interrupt_fl
 					msecs_to_jiffies(lpi->ps_delay_time));
 			return;
 		} else {
-			
 			input_report_abs(lpi->ps_input_dev, ABS_DISTANCE, -1);
 			input_sync(lpi->ps_input_dev);
 		}
@@ -480,7 +471,6 @@ static void report_psensor_input_event(struct cm3629_info *lpi, int interrupt_fl
 		D("[PS][cm3629] Ignore NEAR event\n");
 		lpi->ps_pocket_mode = 1;
 	} else {
-		
 		input_report_abs(lpi->ps_input_dev, ABS_DISTANCE, val);
 		input_sync(lpi->ps_input_dev);
 		blocking_notifier_call_chain(&psensor_notifier_list, val+2, NULL);
@@ -535,13 +525,14 @@ static void report_lsensor_input_event(struct cm3629_info *lpi, bool resume)
 
 	if (ret < 0)
 		printk(KERN_ERR "[LS][cm3629 error] %s fail\n", __func__);
-
-	if ((i == 0) || (adc_value == 0))
+	if ((i == 0) || (adc_value == 0)){
 		D("[LS][cm3629] %s: ADC=0x%03X, Level=%d, l_thd equal 0, h_thd = 0x%x \n",
 			__func__, adc_value, level, *(lpi->cali_table + i));
-	else
+	}
+	else {
 		D("[LS][cm3629] %s: ADC=0x%03X, Level=%d, l_thd = 0x%x, h_thd = 0x%x \n",
 			__func__, adc_value, level, *(lpi->cali_table + (i - 1)) + 1, *(lpi->cali_table + i));
+	}
 
 	lpi->current_level = level;
 	lpi->current_adc = adc_value;
@@ -552,12 +543,12 @@ static void report_lsensor_input_event(struct cm3629_info *lpi, bool resume)
 	}
 	input_report_abs(lpi->ls_input_dev, ABS_MISC, level);
 	input_sync(lpi->ls_input_dev);
-	mutex_lock(&als_disable_mutex);
 	if (lpi->als_enable == 0)
+	{
 		D("[PS][cm3629] l-sensor is already disable intrrupt occur. ");
+	}
 	else
-	enable_als_interrupt();
-	mutex_unlock(&als_disable_mutex);
+		enable_als_interrupt();
 	mutex_unlock(&als_get_adc_mutex);
 
 }
@@ -587,8 +578,10 @@ static void enable_ps_interrupt(char *ps_conf)
 
 	cmd[0] = ps_conf[0];
 	cmd[1] = ps_conf[1];
+
 	D("[PS][cm3629] %s, write cmd[0] = 0x%x, cmd[1] = 0x%x\n",
 		__func__, cmd[0], cmd[1]);
+
 	ret = _cm3629_I2C_Write2(lpi->cm3629_slave_address, PS_config, cmd, 3);
 
 	if (ret != 0) {
@@ -623,10 +616,6 @@ static void sensor_irq_do_work(struct work_struct *work)
 	            __func__, add);
 	}
 	enable_irq(lpi->irq);
-
-	if(!((add & CM3629_PS1_IF_AWAY) || (add & CM3629_PS1_IF_CLOSE) ||
-	     (add & CM3629_PS2_IF_AWAY) || (add & CM3629_PS2_IF_CLOSE)))
-		wake_unlock(&(lpi->ps_wake_lock));
 }
 
 #ifdef POLLING_PROXIMITY
@@ -714,8 +703,10 @@ static void polling_do_work(struct work_struct *w)
 			cmd[1] = lpi->ps1_thd_set + 1;
 			_cm3629_I2C_Write2(lpi->cm3629_slave_address,
 				PS_1_thd, cmd, 3);
+
 			D("[PS][cm3629] SET THD: lpi->ps1_thd_set = %d\n",
 				lpi->ps1_thd_set);
+
 			break;
 		}
 	}
@@ -730,8 +721,8 @@ static irqreturn_t cm3629_irq_handler(int irq, void *data)
 	struct cm3629_info *lpi = data;
 
 	disable_irq_nosync(lpi->irq);
-	if (enable_cm3629_log)
-		D("[PS][cm3629] %s\n", __func__);
+
+	D("[PS][cm3629] %s\n", __func__);
 
 	queue_work(lpi->lp_wq, &sensor_irq_work);
 
@@ -758,6 +749,7 @@ static void ls_initial_cmd(struct cm3629_info *lpi)
 		ALS_config_cmd, cmd, 3);
 
 	_cm3629_I2C_Read2(lpi->cm3629_slave_address, ALS_config_cmd, cmd, 2);
+
 	D("[LS][cm3629] %s, cmd[0] = 0x%x, cmd[1] = 0x%x\n", __func__, cmd[0], cmd[1]);
 }
 
@@ -809,6 +801,7 @@ static int psensor_enable(struct cm3629_info *lpi)
 	mutex_lock(&ps_enable_mutex);
 
 	D("[PS][cm3629] %s +\n", __func__);
+
 	if (lpi->ps_enable) {
 		D("[PS][cm3629] %s: already enabled %d\n", __func__, lpi->ps_enable);
 		lpi->ps_enable++;
@@ -854,8 +847,7 @@ static int psensor_enable(struct cm3629_info *lpi)
 
 	ret = irq_set_irq_wake(lpi->irq, 1);
 	if (ret < 0) {
-		pr_err(
-			"[PS][cm3629 error]%s: fail to enable irq %d as wake interrupt\n",
+		pr_err("[PS][cm3629 error]%s: fail to enable irq %d as wake interrupt\n",
 			__func__, lpi->irq);
 		mutex_unlock(&ps_enable_mutex);
 		return ret;
@@ -865,7 +857,9 @@ static int psensor_enable(struct cm3629_info *lpi)
 	if (lpi->enable_polling_ignore == 1) {
 		if (lpi->mfg_mode != NO_IGNORE_BOOT_MODE) {
 			ret = get_stable_ps_adc_value(&ps_adc1, &ps_adc2);
+
 			D("[PS][cm3629] INITIAL ps_adc1 = 0x%02X\n", ps_adc1);
+
 			if ((ret == 0) && (lpi->mapping_table != NULL) &&
 			    ((ps_adc1 >= lpi->ps1_thd_set - 1)))
 				queue_delayed_work(lpi->lp_wq, &polling_work,
@@ -874,6 +868,7 @@ static int psensor_enable(struct cm3629_info *lpi)
 	}
 #endif
 	mutex_unlock(&ps_enable_mutex);
+
 	D("[PS][cm3629] %s -\n", __func__);
 	return ret;
 }
@@ -887,6 +882,7 @@ static int psensor_disable(struct cm3629_info *lpi)
 	lpi->ps_pocket_mode = 0;
 
 	D("[PS][cm3629] %s %d\n", __func__, lpi->ps_enable);
+
 	if (lpi->ps_enable != 1) {
 		if (lpi->ps_enable > 1)
 			lpi->ps_enable--;
@@ -898,8 +894,7 @@ static int psensor_disable(struct cm3629_info *lpi)
 
 	ret = irq_set_irq_wake(lpi->irq, 0);
 	if (ret < 0) {
-		pr_err(
-			"[PS][cm3629 error]%s: fail to disable irq %d as wake interrupt\n",
+		pr_err("[PS][cm3629 error]%s: fail to disable irq %d as wake interrupt\n",
 			__func__, lpi->irq);
 		mutex_unlock(&ps_enable_mutex);
 		return ret;
@@ -1036,8 +1031,10 @@ static void lightsensor_set_kvalue(struct cm3629_info *lpi)
 		lpi->als_kadc = 1;
 		lpi->als_gadc = 1;
 	}
+
 	D("[LS][cm3629] %s: als_kadc=0x%x, als_gadc=0x%x\n",
 		__func__, lpi->als_kadc, lpi->als_gadc);
+
 }
 
 static void psensor_set_kvalue(struct cm3629_info *lpi)
@@ -1734,8 +1731,7 @@ static ssize_t ls_adc_table_store(struct device *dev,
 		token[i] = strsep((char **)&buf, " ");
 		ret = strict_strtoul(token[i], 16, &(tempdata[i]));
 		if (tempdata[i] < 1 || tempdata[i] > 0xffff) {
-			printk(KERN_ERR
-			"[LS][cm3629 error] adc_table[%d] =  0x%lx Err\n",
+			printk(KERN_ERR "[LS][cm3629 error] adc_table[%d] =  0x%lx Err\n",
 			i, tempdata[i]);
 			return count;
 		}
@@ -1743,8 +1739,7 @@ static ssize_t ls_adc_table_store(struct device *dev,
 	mutex_lock(&als_get_adc_mutex);
 	for (i = 0; i < 10; i++) {
 		lpi->adc_table[i] = tempdata[i];
-		printk(KERN_INFO
-		"[LS][cm3629]Set lpi->adc_table[%d] =  0x%x\n",
+		printk(KERN_INFO "[LS][cm3629]Set lpi->adc_table[%d] =  0x%x\n",
 		i, *(lp_info->adc_table + i));
 	}
 	if (lightsensor_update_table(lpi) < 0)
@@ -1818,8 +1813,7 @@ static int lightsensor_setup(struct cm3629_info *lpi)
 
 	lpi->ls_input_dev = input_allocate_device();
 	if (!lpi->ls_input_dev) {
-		pr_err(
-			"[LS][cm3629 error]%s: could not allocate ls input device\n",
+		pr_err("[LS][cm3629 error]%s: could not allocate ls input device\n",
 			__func__);
 		return -ENOMEM;
 	}
@@ -1856,8 +1850,7 @@ static int psensor_setup(struct cm3629_info *lpi)
 
 	lpi->ps_input_dev = input_allocate_device();
 	if (!lpi->ps_input_dev) {
-		pr_err(
-			"[PS][cm3629 error]%s: could not allocate ps input device\n",
+		pr_err("[PS][cm3629 error]%s: could not allocate ps input device\n",
 			__func__);
 		return -ENOMEM;
 	}
@@ -1867,16 +1860,14 @@ static int psensor_setup(struct cm3629_info *lpi)
 
 	ret = input_register_device(lpi->ps_input_dev);
 	if (ret < 0) {
-		pr_err(
-			"[PS][cm3629 error]%s: could not register ps input device\n",
+		pr_err("[PS][cm3629 error]%s: could not register ps input device\n",
 			__func__);
 		goto err_free_ps_input_device;
 	}
 
 	ret = misc_register(&psensor_misc);
 	if (ret < 0) {
-		pr_err(
-			"[PS][cm3629 error]%s: could not register ps misc device\n",
+		pr_err("[PS][cm3629 error]%s: could not register ps misc device\n",
 			__func__);
 		goto err_unregister_ps_input_device;
 	}
