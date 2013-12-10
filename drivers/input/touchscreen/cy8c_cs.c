@@ -138,7 +138,7 @@ static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 static DECLARE_WORK(sweep2wake_presspwr_work, sweep2wake_presspwr);
 
 void sweep2wake_pwrtrigger(void) {
-	if (scr_suspended && pocket_detect == 1 && power_key_check_in_pocket())
+	if (scr_suspended && pocket_detect == 1 && power_key_check_in_pocket_no_light())
 		return;
 
 	if (mutex_trylock(&pwrlock)) {
