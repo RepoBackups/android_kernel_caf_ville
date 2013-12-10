@@ -2565,6 +2565,23 @@ int power_key_check_in_pocket(void)
 	return (ls_dark && ps_near);
 }
 
+int power_key_check_in_pocket_no_light(void)
+{
+	struct cm3629_info *lpi = lp_info;
+
+	if(plsensor_chip_state) /*pl-sensor no ack */
+		return 0;
+
+	pocket_mode_flag = 1;
+
+	psensor_enable(lpi);
+	psensor_disable(lpi);
+
+	pocket_mode_flag = 0;
+
+	return ps_near;
+}
+
 int psensor_enable_by_touch_driver(int on)
 {
 	struct cm3629_info *lpi = lp_info;
