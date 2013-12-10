@@ -188,4 +188,8 @@ struct cm3629_platform_data {
 	uint16_t w_golden_adc;
 };
 
+<<<<<<< HEAD
+=======
+int power_key_check_in_pocket_no_light(void);
+>>>>>>> e0e282a... input: cm3629: we don't need to use the light sensor to see if it's in pocket so i create simpler function that uses only the proximity value
 #endif
