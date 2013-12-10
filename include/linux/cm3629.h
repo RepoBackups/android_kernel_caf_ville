@@ -152,22 +152,20 @@ struct cm3629_platform_data {
 	int intr;
 	uint16_t levels[10];
 	uint16_t golden_adc;
-	int (*power)(int, uint8_t); 
-	int (*lpm_power)(uint8_t); 
+	int (*power)(int);  
 	uint16_t cm3629_slave_address;
 	uint8_t ps_select;
 	uint8_t ps1_thd_set;
-	uint8_t ps1_thh_diff;
 	uint8_t ps2_thd_set;
 	uint8_t inte_cancel_set;
 	
-	uint8_t ps_conf2_val; 
 	uint8_t *mapping_table;
 	uint8_t mapping_size;
 	uint8_t ps_base_index;
 
 	uint8_t ps_calibration_rule;
 	uint8_t ps_conf1_val;
+	uint8_t ps_conf2_val; 
 	uint8_t ps_conf3_val;
 	uint8_t enable_polling_ignore;
 	uint8_t ps1_thd_no_cal;
@@ -179,7 +177,6 @@ struct cm3629_platform_data {
 	uint8_t ps2_adc_offset;
 	uint8_t ps_debounce;
 	uint16_t ps_delay_time;
-	unsigned int no_need_change_setting;
 	uint8_t dark_level;
 };
 
