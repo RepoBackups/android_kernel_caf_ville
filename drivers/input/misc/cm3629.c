@@ -45,7 +45,7 @@
 #define Max_open_value 50
 #ifdef POLLING_PROXIMITY
 #define POLLING_DELAY		200
-#define TH_ADD			10
+#define TH_ADD			3
 #endif
 
 static void sensor_irq_do_work(struct work_struct *work);
@@ -57,6 +57,7 @@ static void polling_do_work(struct work_struct *w);
 static DECLARE_DELAYED_WORK(polling_work, polling_do_work);
 #endif
 
+<<<<<<< HEAD
 static int record_init_fail = 0;
 static int inter_error = 0;
 static int is_probe_success;
@@ -89,6 +90,12 @@ static int lightsensor_disable(struct cm3629_info *lpi);
 static void psensor_initial_cmd(struct cm3629_info *lpi);
 module_param(p_status, int, 0444);
 
+=======
+static uint8_t sensor_chipId[3] = {0};
+static void report_near_do_work(struct work_struct *w);
+static DECLARE_DELAYED_WORK(report_near_work, report_near_do_work);
+static int plsensor_chip_state;
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 
 struct cm3629_info {
 	struct class *cm3629_class;
@@ -110,8 +117,13 @@ struct cm3629_info {
 	uint16_t cali_table[10];
 	int irq;
 	int ls_calibrate;
+<<<<<<< HEAD
 	int (*power)(int, uint8_t); 
 	int (*lpm_power)(uint8_t); 
+=======
+
+	int (*power)(int); /* power to the chip */
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	uint32_t als_kadc;
 	uint32_t als_gadc;
 	uint16_t golden_adc;
@@ -120,7 +132,6 @@ struct cm3629_info {
 	uint16_t cm3629_slave_address;
 	uint8_t ps_select;
 	uint8_t ps1_thd_set;
-	uint8_t ps1_thh_diff;
 	uint8_t ps2_thd_set;
 	uint8_t original_ps_thd_set;
 	int current_level;
@@ -130,8 +141,6 @@ struct cm3629_info {
 	uint8_t inte_ps2_canc;
 	uint8_t ps_conf1_val;
 	uint8_t ps_conf2_val;
-	uint8_t ps_conf1_val_from_board;
-	uint8_t ps_conf2_val_from_board;
 	uint8_t ps_conf3_val;
 	uint8_t ps_calibration_rule; 
 	unsigned long j_start;
@@ -150,8 +159,6 @@ struct cm3629_info {
 	uint8_t ps2_adc_offset;
 	uint8_t ps_debounce;
 	uint16_t ps_delay_time;
-	unsigned int no_need_change_setting;
-	int ps_th_add;
 	uint8_t dark_level;
 	int ws_calibrate;
 	uint32_t ws_kadc;
@@ -159,6 +166,7 @@ struct cm3629_info {
 	uint16_t w_golden_adc;
 	uint16_t *correction_table;
 };
+<<<<<<< HEAD
 int get_lightsensoradc(void)
 {
 	return current_lightsensor_adc;
@@ -169,6 +177,24 @@ int get_lightsensorkadc(void)
 	return current_lightsensor_kadc;
 
 }
+=======
+
+static uint8_t ps1_canc_set;
+static uint8_t ps2_canc_set;
+static uint8_t ps1_offset_adc;
+static uint8_t ps2_offset_adc;
+static struct cm3629_info *lp_info;
+int enable_cm3629_log;
+int f_cm3629_level = -1;
+static struct mutex als_enable_mutex, als_disable_mutex, als_get_adc_mutex;
+static struct mutex ps_enable_mutex;
+static int ps_hal_enable, ps_drv_enable;
+static int lightsensor_enable(struct cm3629_info *lpi);
+static int lightsensor_disable(struct cm3629_info *lpi);
+static void psensor_initial_cmd(struct cm3629_info *lpi);
+static int ps_near;
+static int pocket_mode_flag, psensor_enable_by_touch;
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 
 static int I2C_RxData_2(char *rxData, int length)
 {
@@ -193,9 +219,9 @@ static int I2C_RxData_2(char *rxData, int length)
 	for (loop_i = 0; loop_i < I2C_RETRY_COUNT; loop_i++) {
 		if (i2c_transfer(lp_info->i2c_client->adapter, msgs, 2) > 0)
 			break;
-
 		D("[PS][cm3629 warning] %s, i2c err, ISR gpio %d\n",
 				__func__, lpi->intr_pin);
+
 		usleep(10);
 	}
 
@@ -266,11 +292,6 @@ static int _cm3629_I2C_Read2(uint16_t slaveAddr,
 	for (i = 0; i < length; i++) {
 		*(pdata+i) = buffer[i];
 	}
-#if 0
-	
-	printk(KERN_DEBUG "[cm3629] %s: I2C_RxData[0x%x] = 0x%x\n",
-		__func__, slaveAddr, buffer);
-#endif
 	return ret;
 }
 
@@ -279,12 +300,15 @@ static int _cm3629_I2C_Write2(uint16_t SlaveAddress,
 {
 	char buffer[3];
 	int ret = 0;
+<<<<<<< HEAD
 #if 0
 	
 	printk(KERN_DEBUG
 	"[cm3629] %s: _cm3629_I2C_Write_Byte[0x%x, 0x%x, 0x%x]\n",
 		__func__, SlaveAddress, cmd, *data);
 #endif
+=======
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	if (length > 3) {
 		pr_err(
 			"[PS_ERR][cm3629 error]%s: length %d> 2: \n",
@@ -303,6 +327,7 @@ static int _cm3629_I2C_Write2(uint16_t SlaveAddress,
 
 	return ret;
 }
+<<<<<<< HEAD
 static int sensor_lpm_power(int enable)
 {
 	struct cm3629_info *lpi = lp_info;
@@ -382,6 +407,10 @@ static int get_ls_adc_value(uint32_t *als_step, int resume)
 }
 
 static int get_ws_adc_value(uint32_t *als_step, bool resume)
+=======
+
+static int get_ls_adc_value(uint32_t *als_step, bool resume)
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 {
 
 	struct cm3629_info *lpi = lp_info;
@@ -536,13 +565,10 @@ static void report_psensor_input_event(struct cm3629_info *lpi, int interrupt_fl
 #endif
 	ret = get_ps_adc_value(&ps1_adc, &ps2_adc);
 	if (lpi->ps_select == CM3629_PS2_ONLY) {
-		ps_thd_set = lpi->ps2_thd_set + 1;
+		ps_thd_set = lpi->ps2_thd_set;
 		ps_adc = ps2_adc;
 	} else {
-		if (lpi->ps1_thh_diff == 0)
-			ps_thd_set = lpi->ps1_thd_set + 1;
-		else
-			ps_thd_set = lpi->ps1_thd_set + lpi->ps1_thh_diff;
+		ps_thd_set = lpi->ps1_thd_set;
 		ps_adc = ps1_adc;
 	}
 	if (interrupt_flag == 0) {
@@ -673,7 +699,12 @@ static void report_lsensor_input_event(struct cm3629_info *lpi, int resume)
 	}
 	input_report_abs(lpi->ls_input_dev, ABS_MISC, level);
 	input_sync(lpi->ls_input_dev);
+	mutex_lock(&als_disable_mutex);
+	if (lpi->als_enable == 0)
+		D("[PS][cm3629] l-sensor is already disable intrrupt occur. ");
+	else
 	enable_als_interrupt();
+	mutex_unlock(&als_disable_mutex);
 	mutex_unlock(&als_get_adc_mutex);
 
 }
@@ -687,10 +718,7 @@ static void enable_ps_interrupt(char *ps_conf)
 	lpi->ps_enable = 1;
 
 	cmd[0] = lpi->ps1_thd_set;
-	if (lpi->ps1_thh_diff == 0)
 		cmd[1] = lpi->ps1_thd_set + 1;
-	else
-		cmd[1] = lpi->ps1_thd_set + lpi->ps1_thh_diff;
 	_cm3629_I2C_Write2(lpi->cm3629_slave_address,
 		PS_1_thd, cmd, 3);
 
@@ -725,7 +753,12 @@ static void sensor_irq_do_work(struct work_struct *work)
 	struct cm3629_info *lpi = lp_info;
 	uint8_t cmd[3];
 	uint8_t add = 0;
+<<<<<<< HEAD
 	
+=======
+
+	wake_lock_timeout(&(lpi->ps_wake_lock), 3*HZ);
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	_cm3629_I2C_Read2(lpi->cm3629_slave_address, INT_FLAG, cmd, 2);
 	add = cmd[1];
 #if 0
@@ -734,9 +767,13 @@ static void sensor_irq_do_work(struct work_struct *work)
 #endif
 	if ((add & CM3629_PS1_IF_AWAY) || (add & CM3629_PS1_IF_CLOSE) ||
 	    (add & CM3629_PS2_IF_AWAY) || (add & CM3629_PS2_IF_CLOSE)) {
+<<<<<<< HEAD
 		wake_lock_timeout(&(lpi->ps_wake_lock), 2*HZ);
 		inter_error = 0;
 		if ((add & CM3629_PS1_IF_AWAY) || (add & CM3629_PS2_IF_AWAY)) {
+=======
+		if ((add & CM3629_PS1_IF_AWAY) || (add & CM3629_PS2_IF_AWAY))
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 			report_psensor_input_event(lpi, 1);
 			p_irq_status = 0;
 			min_adc = 255;
@@ -750,6 +787,7 @@ static void sensor_irq_do_work(struct work_struct *work)
 
 	if (((add & CM3629_ALS_IF_L) == CM3629_ALS_IF_L) ||
 		     ((add & CM3629_ALS_IF_H) == CM3629_ALS_IF_H)) {
+<<<<<<< HEAD
 		if (lpi->lightsensor_opened) {
 			inter_error = 0;
 			report_lsensor_input_event(lpi, 0);
@@ -767,8 +805,18 @@ static void sensor_irq_do_work(struct work_struct *work)
                 	pr_err("[PS][cm3629 error]%s error: unkown interrupt: 0x%x!\n",
 	                __func__, add);
 		}
+=======
+		report_lsensor_input_event(lpi, 0);
+	} else {
+		pr_err("[PS][cm3629 error]%s error: unkown interrupt: 0x%x!\n",
+	            __func__, add);
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	}
 	enable_irq(lpi->irq);
+
+	if(!((add & CM3629_PS1_IF_AWAY) || (add & CM3629_PS1_IF_CLOSE) ||
+	     (add & CM3629_PS2_IF_AWAY) || (add & CM3629_PS2_IF_CLOSE)))
+		wake_unlock(&(lpi->ps_wake_lock));
 }
 
 #ifdef POLLING_PROXIMITY
@@ -919,26 +967,29 @@ static void polling_do_work(struct work_struct *w)
 			if (i == (lpi->mapping_size - 1))
 				lpi->ps1_thd_set = 0xFF;
 			else
+<<<<<<< HEAD
 				lpi->ps1_thd_set = (lpi->mapping_table[i] + lpi->ps_th_add);
 
 			if (lpi->ps1_thd_set <= avg_min_adc)
 				lpi->ps1_thd_set = 0xFF;
+=======
+				lpi->ps1_thd_set = (lpi->mapping_table[i] +
+						   TH_ADD);
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 
 			
 			cmd[0] = lpi->ps1_thd_set;
-			if (lpi->ps1_thh_diff == 0)
-				cmd[1] = lpi->ps1_thd_set + 1;
-			else
-				cmd[1] = lpi->ps1_thd_set + lpi->ps1_thh_diff;
-
-			if (cmd[1] < cmd[0])
-				cmd[1] = cmd[0];
-
+			cmd[1] = lpi->ps1_thd_set + 1;
 			_cm3629_I2C_Write2(lpi->cm3629_slave_address,
 				PS_1_thd, cmd, 3);
+<<<<<<< HEAD
 			D("[PS][cm3629] SET THD1: lpi->ps1_thd_set = %d,"
 				" cmd[0] = 0x%x, cmd[1] = 0x%x, avg_min_adc = %d\n",
 				lpi->ps1_thd_set, cmd[0], cmd[1], avg_min_adc);
+=======
+			D("[PS][cm3629] SET THD: lpi->ps1_thd_set = %d\n",
+				lpi->ps1_thd_set);
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 			break;
 		}
 	}
@@ -982,7 +1033,7 @@ static int als_power(int enable)
 	struct cm3629_info *lpi = lp_info;
 
 	if (lpi->power)
-		lpi->power(LS_PWR_ON, enable);
+		lpi->power(enable);
 
 	return 0;
 }
@@ -1013,19 +1064,12 @@ static void psensor_initial_cmd(struct cm3629_info *lpi)
 {
 	char cmd[2] = {0};
 
-	cmd[0] = lpi->ps_conf1_val;
-	cmd[1] = lpi->ps_conf2_val;
-	_cm3629_I2C_Write2(lpi->cm3629_slave_address, PS_config, cmd, 3);
-
 	cmd[0] = lpi->ps_conf3_val;
 	cmd[1] = CM3629_PS_255_STEPS;
 	_cm3629_I2C_Write2(lpi->cm3629_slave_address, PS_config_ms, cmd, 3);
 
 	cmd[0] = lpi->ps1_thd_set;
-	if (lpi->ps1_thh_diff == 0)
-		cmd[1] = lpi->ps1_thd_set + 1;
-	else
-		cmd[1] = lpi->ps1_thd_set + lpi->ps1_thh_diff;
+	cmd[1] = lpi->ps1_thd_set + 1;
 	_cm3629_I2C_Write2(lpi->cm3629_slave_address,
 		PS_1_thd, cmd, 3);
 
@@ -1035,6 +1079,10 @@ static void psensor_initial_cmd(struct cm3629_info *lpi)
 		PS_2_thd, cmd, 3);
 
 	psensor_intelligent_cancel_cmd(lpi);
+
+	cmd[0] = lpi->ps_conf1_val;
+	cmd[1] = lpi->ps_conf2_val;
+	_cm3629_I2C_Write2(lpi->cm3629_slave_address, PS_config, cmd, 3);
 
 	D("[PS][cm3629] %s, finish\n", __func__);
 }
@@ -1061,7 +1109,11 @@ static int psensor_enable(struct cm3629_info *lpi)
 		mutex_unlock(&ps_enable_mutex);
 		return 0;
 	}
+<<<<<<< HEAD
 	sensor_lpm_power(0);
+=======
+	blocking_notifier_call_chain(&psensor_notifier_list, 1, NULL);
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	lpi->j_start = jiffies;
 
 	
@@ -1137,6 +1189,7 @@ static int psensor_disable(struct cm3629_info *lpi)
 	int i;
 	char cmd[2];
 	mutex_lock(&ps_enable_mutex);
+	lpi->ps_pocket_mode = 0;
 
 	D("[PS][cm3629] %s %d\n", __func__, lpi->ps_enable);
 	if (lpi->ps_enable != 1) {
@@ -1147,8 +1200,12 @@ static int psensor_disable(struct cm3629_info *lpi)
 		mutex_unlock(&ps_enable_mutex);
 		return 0;
 	}
+<<<<<<< HEAD
 	lpi->ps_conf1_val = lpi->ps_conf1_val_from_board;
 	lpi->ps_conf2_val = lpi->ps_conf2_val_from_board;
+=======
+
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	ret = irq_set_irq_wake(lpi->irq, 0);
 	if (ret < 0) {
 		pr_err(
@@ -1184,6 +1241,7 @@ static int psensor_disable(struct cm3629_info *lpi)
 		D("[PS][cm3629] %s: record_adc[0-4]: %d, %d, %d, %d, %d\n", __func__, record_adc[0], record_adc[1], record_adc[2], record_adc[3], record_adc[4]);
 		min_adc = 255;
 		lpi->ps_base_index = (lpi->mapping_size - 1);
+<<<<<<< HEAD
 		if (lpi->ps1_thd_set > Max_open_value) {
 			lpi->ps1_thd_set = lpi->original_ps_thd_set;
 			
@@ -1195,10 +1253,18 @@ static int psensor_disable(struct cm3629_info *lpi)
 			D("[PS][cm3629] %s: restore lpi->ps1_thd_set = %d \n", __func__, lpi->ps1_thd_set);
 			_cm3629_I2C_Write2(lpi->cm3629_slave_address, PS_1_thd, cmd, 3);
 		}
+=======
+
+		lpi->ps1_thd_set = lpi->original_ps_thd_set;
+		
+		cmd[0] = lpi->ps1_thd_set;
+		cmd[1] = lpi->ps1_thd_set + 1;
+		_cm3629_I2C_Write2(lpi->cm3629_slave_address,
+			PS_1_thd, cmd, 3);
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	}
 	p_status = 0;
 	mutex_unlock(&ps_enable_mutex);
-	D("[PS][cm3629] %s --%d\n", __func__, lpi->ps_enable);
 	return ret;
 }
 
@@ -1296,8 +1362,7 @@ static void lightsensor_set_kvalue(struct cm3629_info *lpi)
 	}
 	current_lightsensor_kadc = lpi->als_kadc;
 	if (lpi->als_kadc && lpi->golden_adc > 0) {
-		lpi->als_kadc = (lpi->als_kadc > 0) ?
-				lpi->als_kadc : lpi->golden_adc;
+		lpi->als_kadc = lpi->als_kadc;
 		lpi->als_gadc = lpi->golden_adc;
 	} else {
 		lpi->als_kadc = 1;
@@ -1429,7 +1494,6 @@ static int lightsensor_enable(struct cm3629_info *lpi)
 	char cmd[3] = {0};
 
 	mutex_lock(&als_enable_mutex);
-	sensor_lpm_power(0);
 	D("[LS][cm3629] %s\n", __func__);
 
 	if (sensor_chipId[0] != 0x29)
@@ -1445,6 +1509,7 @@ static int lightsensor_enable(struct cm3629_info *lpi)
 		"[LS][cm3629 error]%s: set auto light sensor fail\n",
 		__func__);
 	else {
+<<<<<<< HEAD
 		if (sensor_chipId[0] != 0x29)
 			delay = 80;
 		else
@@ -1455,6 +1520,10 @@ static int lightsensor_enable(struct cm3629_info *lpi)
 
 		hr_msleep(delay);
 
+=======
+		usleep(10);
+		lpi->als_enable = 1;
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 		input_report_abs(lpi->ls_input_dev, ABS_MISC, -1);
 		input_sync(lpi->ls_input_dev);
 		report_lsensor_input_event(lpi, 1);
@@ -1567,7 +1636,7 @@ static ssize_t ps_adc_show(struct device *dev,
 	struct cm3629_info *lpi = lp_info;
 	int int_gpio;
 
-	int_gpio = gpio_get_value_cansleep(lpi->intr_pin);
+	int_gpio = gpio_get_value(lpi->intr_pin);
 	get_ps_adc_value(&ps_adc1, &ps_adc2);
 	if (lpi->ps_calibration_rule == 1) {
 		D("[PS][cm3629] %s: PS1_ADC=0x%02X, PS2_ADC=0x%02X, "
@@ -1649,7 +1718,6 @@ static ssize_t ps_enable_store(struct device *dev,
 }
 
 static DEVICE_ATTR(ps_adc, 0664, ps_adc_show, ps_enable_store);
-static int kcalibrated;
 static ssize_t ps_kadc_show(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
@@ -1657,7 +1725,7 @@ static ssize_t ps_kadc_show(struct device *dev,
 	int ret = 0;
 	struct cm3629_info *lpi = lp_info;
 
-	if ((ps_kparam1 >> 16 == PS_CALIBRATED) || kcalibrated == 1)
+	if (ps_kparam1 >> 16 == PS_CALIBRATED)
 		ret = sprintf(buf, "P-sensor calibrated,"
 			      "INTE_PS1_CANC = (0x%02X), "
 			      "INTE_PS2_CANC = (0x%02X)\n",
@@ -1762,7 +1830,6 @@ static ssize_t ps_kadc_store(struct device *dev,
 #endif
 	D("[PS]%s: inte_ps1_canc = 0x%02X, inte_ps2_canc = 0x%02X, lpi->ps_conf1_val  = 0x%02X\n",
 	  __func__, lpi->inte_ps1_canc, lpi->inte_ps2_canc, lpi->ps_conf1_val);
-	kcalibrated = 1;
 	return count;
 }
 
@@ -1841,22 +1908,14 @@ static ssize_t ps_i2c_store(struct device *dev,
 	char *token[10];
 	int i, ret = 0;
 	uint8_t reg = 0, value[3] = {0}, read_value[3] = {0};
-	unsigned long ul_reg = 0, ul_value[3] = {0};
 
 	printk(KERN_INFO "[CM3629_] %s\n", buf);
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 3; i++)
 		token[i] = strsep((char **)&buf, " ");
-		D("%s: token[%d] = %s\n", __func__, i, token[i]);
-	}
-
-	ret = strict_strtoul(token[0], 16, &ul_reg);
-	ret = strict_strtoul(token[1], 16, &(ul_value[0]));
-	ret = strict_strtoul(token[2], 16, &(ul_value[1]));
-
-	reg = ul_reg;
-	value[0] = ul_value[0];
-	value[1] = ul_value[1];
+	 ret = strict_strtoul(token[0], 16, (unsigned long *)&(reg));
+	 ret = strict_strtoul(token[1], 16, (unsigned long *)&(value[0]));
+	 ret = strict_strtoul(token[2], 16, (unsigned long *)&(value[1]));
 
 	_cm3629_I2C_Write2(lpi->cm3629_slave_address,
 		reg, value, 3);
@@ -1878,7 +1937,7 @@ static ssize_t ps_i2c_store(struct device *dev,
 		D("[CM3629] NO parameter update for register 0x%02X\n", reg);
 	}
 
-	return count;
+	return ret;
 }
 static DEVICE_ATTR(ps_i2c, 0664, ps_i2c_show, ps_i2c_store);
 
@@ -1931,94 +1990,6 @@ static ssize_t ps_hw_store(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR(ps_hw, 0664, ps_hw_show, ps_hw_store);
-
-static ssize_t ps_headset_bt_plugin_show(struct device *dev,
-			struct device_attribute *attr, char *buf)
-{
-	int ret = 0;
-	struct cm3629_info *lpi = lp_info;
-
-	ret = sprintf(buf, "ps_conf1_val = 0x%02X, ps_conf2_val = 0x%02X\n",
-		      lpi->ps_conf1_val, lpi->ps_conf2_val);
-
-	return ret;
-}
-static ssize_t ps_headset_bt_plugin_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	int headset_bt_plugin = 0;
-	struct cm3629_info *lpi = lp_info;
-	char cmd[2] = {0};
-
-	sscanf(buf, "%d", &headset_bt_plugin);
-	D("[PS] %s: headset_bt_plugin = %d\n", __func__, headset_bt_plugin);
-
-	if (lpi->no_need_change_setting == 1) {
-		D("[PS] %s: no_need_change_setting = 0x%x.\n", __func__, lpi->no_need_change_setting);
-		return count;
-	} else {
-		if (headset_bt_plugin == 1) {
-			D("[PS][cm3629] %s, Headset or BT or Speaker ON\n", __func__);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read value => cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-
-			D("[PS][cm3629] %s, Before setting: ps_conf1_val = 0x%x\n",
-				__func__, lpi->ps_conf1_val);
-			lpi->ps_conf1_val = (cmd[0] & 0x3) | (CM3629_PS_DR_1_320 |
-							      CM3629_PS_IT_1_6T |
-							      CM3629_PS1_PERS_1);
-			D("[PS][cm3629] %s, After setting: ps_conf1_val = 0x%x\n",
-				__func__, lpi->ps_conf1_val);
-
-			D("[PS][cm3629] %s, Before setting: ps_conf2_val = 0x%x\n",
-				__func__, lpi->ps_conf2_val);
-			lpi->ps_conf2_val = (cmd[1] & 0xF) | (CM3629_PS_ITB_1 |
-							      CM3629_PS_ITR_1);
-			D("[PS][cm3629] %s, After setting: ps_conf2_val = 0x%x\n",
-				__func__, lpi->ps_conf2_val);
-
-			cmd[0] = lpi->ps_conf1_val;
-			cmd[1] = lpi->ps_conf2_val;
-			D("[PS][cm3629] %s, write cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-			_cm3629_I2C_Write2(lpi->cm3629_slave_address,
-						 PS_config, cmd, 3);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read 0x3 cmd value after set =>"
-				" cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-		} else {
-			D("[PS][cm3629] %s, Headset or BT or Speaker OFF\n", __func__);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read value => cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-
-			lpi->ps_conf1_val = lpi->ps_conf1_val_from_board;
-			lpi->ps_conf2_val = lpi->ps_conf2_val_from_board;
-
-			cmd[0] = ((cmd[0] & 0x3) | lpi->ps_conf1_val);
-			cmd[1] = ((cmd[1] & 0xF) | lpi->ps_conf2_val);
-			D("[PS][cm3629] %s, write cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-			_cm3629_I2C_Write2(lpi->cm3629_slave_address,
-						 PS_config, cmd, 3);
-
-			_cm3629_I2C_Read2(lpi->cm3629_slave_address, PS_config, cmd, 2);
-			D("[PS][cm3629] %s, read 0x3 cmd value after set =>"
-				" cmd[0] = 0x%x, cmd[1] = 0x%x\n",
-				__func__, cmd[0], cmd[1]);
-		}
-
-	}
-
-	return count;
-}
-static DEVICE_ATTR(ps_headset_bt_plugin, 0664, ps_headset_bt_plugin_show, ps_headset_bt_plugin_store);
 
 static ssize_t ls_adc_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
@@ -2219,6 +2190,7 @@ static ssize_t ls_fLevel_store(struct device *dev,
 }
 static DEVICE_ATTR(ls_flevel, 0664, ls_fLevel_show, ls_fLevel_store);
 
+<<<<<<< HEAD
 
 static ssize_t ps_workaround_table_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
@@ -2370,6 +2342,8 @@ static ssize_t phone_status_store(struct device *dev,
 }
 static DEVICE_ATTR(PhoneApp_status, 0666, phone_status_show, phone_status_store);
 
+=======
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 static ssize_t ls_dark_level_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -2476,6 +2450,70 @@ err_free_ps_input_device:
 	return ret;
 }
 
+<<<<<<< HEAD
+=======
+int power_key_check_in_pocket(void)
+{
+	struct cm3629_info *lpi = lp_info;
+	int ls_dark;
+
+	uint32_t ls_adc = 0;
+	int ls_level = 0;
+	int i;
+	if(plsensor_chip_state) /*pl-sensor no ack */
+		return 0;
+	pocket_mode_flag = 1;
+	D("[cm3629] %s +++\n", __func__);
+	
+	psensor_enable(lpi);
+	D("[cm3629] %s ps_near %d\n", __func__, ps_near);
+	psensor_disable(lpi);
+
+	
+	mutex_lock(&als_get_adc_mutex);
+	get_ls_adc_value(&ls_adc, 0);
+	enable_als_interrupt();
+	mutex_unlock(&als_get_adc_mutex);
+	for (i = 0; i < 10; i++) {
+		if (ls_adc <= (*(lpi->adc_table + i))) {
+			ls_level = i;
+			if (*(lpi->adc_table + i))
+				break;
+		}
+		if (i == 9) {
+			ls_level = i;
+			break;
+		}
+	}
+	D("[cm3629] %s ls_adc %d, ls_level %d\n", __func__, ls_adc, ls_level);
+	ls_dark = (ls_level <= lpi->dark_level) ? 1 : 0;
+
+	D("[cm3629] %s --- ls_dark %d\n", __func__, ls_dark);
+	pocket_mode_flag = 0;
+	return (ls_dark && ps_near);
+}
+
+int psensor_enable_by_touch_driver(int on)
+{
+	struct cm3629_info *lpi = lp_info;
+
+	if (plsensor_chip_state) {
+		D("[cm3629] %s return by cm3629 probe fail\n", __func__);
+		return 0;
+	}
+	psensor_enable_by_touch = 1;
+
+	D("[PS][cm3629] %s on:%d\n", __func__, on);
+	if (on) 
+		psensor_enable(lpi);
+	else 
+		psensor_disable(lpi);
+	
+	psensor_enable_by_touch = 0;
+
+	return 0;
+}
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 static int cm3629_read_chip_id(struct cm3629_info *lpi)
 {
 	uint8_t chip_id[3] = {0};
@@ -2560,17 +2598,20 @@ static void cm3629_early_suspend(struct early_suspend *h)
 
 	D("[LS][cm3629] %s\n", __func__);
 
-	if (lpi->ps_enable == 0)
-		sensor_lpm_power(1);
-	else
-		D("[PS][cm3629] %s: Psensor enable, so did not enter lpm\n", __func__);
+	if (lpi->als_enable)
+		lightsensor_disable(lpi);
 }
 
 static void cm3629_late_resume(struct early_suspend *h)
 {
-	sensor_lpm_power(0);
-	D("[LS][cm3629] %s\n", __func__);
+	struct cm3629_info *lpi = lp_info;
 
+	D("[LS][cm3629] %s start als_enable: %d\n", __func__, lpi->als_enable);
+
+	if (!lpi->als_enable)
+		lightsensor_enable(lpi);
+
+	D("[LS][cm3629] %s end\n", __func__);
 }
 #if 0
 static void release_psensor_wakelock_handler(void)
@@ -2590,6 +2631,9 @@ static int cm3629_probe(struct i2c_client *client,
 	D("[PS][cm3629] %s\n", __func__);
 
 
+	plsensor_chip_state = 0; /*default state*/
+	pocket_mode_flag = 0;
+	psensor_enable_by_touch = 0;
 	lpi = kzalloc(sizeof(struct cm3629_info), GFP_KERNEL);
 	if (!lpi)
 		return -ENOMEM;
@@ -2604,7 +2648,17 @@ static int cm3629_probe(struct i2c_client *client,
 	}
 
 	lpi->irq = client->irq;
+<<<<<<< HEAD
 	lpi->mfg_mode = board_mfg_mode();
+=======
+
+	// === power on ===
+	if(pdata->power)
+		pdata->power(1);
+
+	lpi->mfg_mode = 0;
+
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	i2c_set_clientdata(client, lpi);
 	lpi->model = pdata->model;
 	lpi->intr_pin = pdata->intr;
@@ -2612,16 +2666,12 @@ static int cm3629_probe(struct i2c_client *client,
 	lpi->golden_adc = pdata->golden_adc;
 	lpi->w_golden_adc = pdata->w_golden_adc;
 	lpi->power = pdata->power;
-	lpi->lpm_power = pdata->lpm_power;
 	lpi->cm3629_slave_address = pdata->cm3629_slave_address;
 	lpi->ps_select = pdata->ps_select;
 	lpi->ps1_thd_set = pdata->ps1_thd_set;
-	lpi->ps1_thh_diff = pdata->ps1_thh_diff;
 	lpi->ps2_thd_set = pdata->ps2_thd_set;
 	lpi->ps_conf1_val = pdata->ps_conf1_val;
 	lpi->ps_conf2_val = pdata->ps_conf2_val;
-	lpi->ps_conf1_val_from_board = pdata->ps_conf1_val;
-	lpi->ps_conf2_val_from_board = pdata->ps_conf2_val;
 	lpi->ps_conf3_val = pdata->ps_conf3_val;
 	lpi->ps_calibration_rule = pdata->ps_calibration_rule;
 	lpi->j_start = 0;
@@ -2639,8 +2689,11 @@ static int cm3629_probe(struct i2c_client *client,
 	lpi->ps2_adc_offset = pdata->ps2_adc_offset;
 	lpi->ps_debounce = pdata->ps_debounce;
 	lpi->ps_delay_time = pdata->ps_delay_time;
+<<<<<<< HEAD
 	lpi->no_need_change_setting = pdata->no_need_change_setting;
 	lpi->ps_th_add = (pdata->ps_th_add) ? pdata->ps_th_add : TH_ADD;
+=======
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	lpi->dark_level = pdata->dark_level;
 	lpi->correction_table = pdata->correction;
 
@@ -2649,22 +2702,23 @@ static int cm3629_probe(struct i2c_client *client,
 	ret = cm3629_read_chip_id(lpi);
 	if (ret < 0) {
 		pr_err("[PS_ERR][cm3629 error]%s: cm3629_read_chip_id error!\n", __func__);
+		plsensor_chip_state = 1; /*represent plsensor no ack*/
 		goto err_cm3629_read_chip_id;
 	}
 
 	if (pdata->ls_cmd == 0) {
 		if (sensor_chipId[0] != 0x29)
-			lpi->ls_cmd  = CM3629_ALS_IT_320ms | CM3629_ALS_PERS_1;
+			lpi->ls_cmd  = CM3629_ALS_IT_320ms | CM3629_ALS_PERS_2;
 		else
-			lpi->ls_cmd  = CM3629_ALS_IT_400ms | CM3629_ALS_PERS_1;
+			lpi->ls_cmd  = CM3629_ALS_IT_400ms | CM3629_ALS_PERS_2;
 
 		pr_info("[PS][cm3629]%s: lp_info->ls_cmd = 0x%x!\n",
 			__func__, lp_info->ls_cmd);
 	}
 	D("[PS][cm3629] %s: ls_cmd 0x%x, ps1_adc_offset=0x%02X, "
-	  "ps2_adc_offset=0x%02X, ps_debounce=0x%x, ps1_thh_diff %d\n",
+	  "ps2_adc_offset=0x%02X, ps_debounce=0x%x\n",
 	  __func__, lpi->ls_cmd, lpi->ps1_adc_offset,
-	  lpi->ps2_adc_offset, lpi->ps_debounce, lpi->ps1_thh_diff);
+	  lpi->ps2_adc_offset, lpi->ps_debounce);
 
 	mutex_init(&als_enable_mutex);
 	mutex_init(&als_disable_mutex);
@@ -2788,6 +2842,7 @@ static int cm3629_probe(struct i2c_client *client,
 	if (ret)
 		goto err_create_ps_device;
 
+<<<<<<< HEAD
 	ret = device_create_file(lpi->ps_dev, &dev_attr_ps_headset_bt_plugin);
 	if (ret)
 		goto err_create_ps_device;
@@ -2804,15 +2859,19 @@ static int cm3629_probe(struct i2c_client *client,
 	if (ret)
 		goto err_create_ps_device;
 
+=======
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	lpi->early_suspend.level =
 			EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	lpi->early_suspend.suspend = cm3629_early_suspend;
 	lpi->early_suspend.resume = cm3629_late_resume;
 	register_early_suspend(&lpi->early_suspend);
+<<<<<<< HEAD
 
 	sensor_lpm_power(0);
+=======
+>>>>>>> 484702b1... input: cm3629: update driver from endeavoru kernel
 	D("[PS][cm3629] %s: Probe success!\n", __func__);
-	is_probe_success = 1;
 	return ret;
 
 err_create_ps_device:

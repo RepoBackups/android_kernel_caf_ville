@@ -393,6 +393,7 @@ out:
  * Write out information from cpufreq_driver->policy[cpu]; object must be
  * "unsigned int".
  */
+
 #define show_one(file_name, object)			\
 static ssize_t show_##file_name				\
 (struct cpufreq_policy *policy, char *buf)		\
@@ -1005,10 +1006,8 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	struct cpufreq_policy *policy;
 	unsigned long flags;
 	unsigned int j;
-
 #ifdef CONFIG_HOTPLUG_CPU
 	int sibling;
-	struct cpufreq_policy *cp;
 #endif
 
 	if (cpu_is_offline(cpu))
@@ -1077,17 +1076,9 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	}
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
-//***ADD THIS HERE TO FORCE SECONDARY CPU'S TO INITIALIZE AT SAME POLICY AS BOOT CPU0**	
-	if (policy->cpu >=1) {
-	// dealing with secondary cpu, force policy of cpu0 on this cpu as well for init
-	cp = per_cpu(cpufreq_cpu_data, 0);
-	policy->governor = cp->governor;
-	policy->min = cp->min;
-	policy->max = cp->max;
-	policy->user_policy.min = cp->user_policy.min;
-	policy->user_policy.max = cp->user_policy.max;
-	}
-//***END**
+
+	policy->util = 0;
+
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
 
@@ -1186,18 +1177,6 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 
 #ifdef CONFIG_SMP
 
-<<<<<<< HEAD
-=======
-#ifdef CONFIG_HOTPLUG_CPU
-	strncpy(per_cpu(cpufreq_policy_save, cpu).gov, data->governor->name,
-			CPUFREQ_NAME_LEN);
-	per_cpu(cpufreq_policy_save, cpu).min = data->user_policy.min;
-	per_cpu(cpufreq_policy_save, cpu).max = data->user_policy.max;
-	pr_debug("Saving CPU%d user policy min %d and max %d\n",
-			cpu, data->user_policy.min, data->user_policy.max);
-#endif
-
->>>>>>> e31d71a... cpufreq: Save user policy min/max instead of policy min/max during hotplug
 	/* if we have other CPUs still registered, we need to unlink them,
 	 * or else wait_for_completion below will lock up. Clean the
 	 * per_cpu(cpufreq_cpu_data) while holding the lock, and remove
@@ -1218,19 +1197,6 @@ static int __cpufreq_remove_dev(struct device *dev, struct subsys_interface *sif
 			if (j == cpu)
 				continue;
 			pr_debug("removing link for cpu %u\n", j);
-<<<<<<< HEAD
-=======
-#ifdef CONFIG_HOTPLUG_CPU
-			strncpy(per_cpu(cpufreq_policy_save, j).gov,
-				data->governor->name, CPUFREQ_NAME_LEN);
-			per_cpu(cpufreq_policy_save, j).min
-						= data->user_policy.min;
-			per_cpu(cpufreq_policy_save, j).max
-						= data->user_policy.max;
-			pr_debug("Saving CPU%d user policy min %d and max %d\n",
-					j, data->min, data->max);
-#endif
->>>>>>> e31d71a... cpufreq: Save user policy min/max instead of policy min/max during hotplug
 			cpu_dev = get_cpu_device(j);
 			kobj = &cpu_dev->kobj;
 			unlock_policy_rwsem_write(cpu);
@@ -1882,6 +1848,7 @@ error_out:
 	return ret;
 }
 
+
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ // limit max freq
 enum {
 	SET_MIN = 0,
@@ -2225,6 +2192,9 @@ static int __init cpufreq_core_init(void)
 	cpufreq_global_kobject->kset = cpufreq_kset;
 
 	register_syscore_ops(&cpufreq_syscore_ops);
+#ifdef CONFIG_CPU_VOLTAGE_TABLE
+	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
+#endif	/* CONFIG_CPU_VOLTAGE_TABLE */
 
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
