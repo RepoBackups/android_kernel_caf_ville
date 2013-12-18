@@ -354,8 +354,8 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 
 CUSTOM_FLAG	= -fgcse-lm -fgcse-sm -fsched-spec-load -fgcse-after-reload \
 		  -fforce-addr -ffast-math  -fsingle-precision-constant \
-		  -mcpu=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize  \
-		  -mvectorize-with-neon-quad \
+		  -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize  \
+		  -mvectorize-with-neon-quad -marm \
 		  -funroll-loops -mvectorize-with-neon-quad -pipe \
 		  #-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
 		  -munaligned-access -fpredictive-commoning
