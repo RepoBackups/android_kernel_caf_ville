@@ -63,7 +63,7 @@ CUSTOM_FLAG	= -fgcse-lm -fgcse-sm -fsched-spec-load -fgcse-after-reload \
 		  -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize  \
 		  -mvectorize-with-neon-quad -marm \
 		  -funroll-loops -mvectorize-with-neon-quad -pipe \
-		  #-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
+		  -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
 		  -munaligned-access -fpredictive-commoning
 
 arch-$(CONFIG_CPU_32v7)		:=-D__LINUX_ARM_ARCH__=7 $(call cc-option, $(CUSTOM_FLAG))
