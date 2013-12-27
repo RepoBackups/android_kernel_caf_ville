@@ -34,6 +34,7 @@
 #include "z180.h"
 #include "kgsl_cffdump.h"
 
+int msm_unregister_domain(struct iommu_domain *domain);
 
 static struct kgsl_iommu_register_list kgsl_iommuv1_reg[KGSL_IOMMU_REG_MAX] = {
 	{ 0, 0, 0 },				/* GLOBAL_BASE */
