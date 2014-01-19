@@ -560,6 +560,7 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 	struct usb_hcd *hcd = hsic_to_hcd(mehci);
 	int ret;
 	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
+	u32 temp;
 
 	msm_hsic_clk_reset(mehci);
 
@@ -616,6 +617,10 @@ static int msm_hsic_reset(struct msm_hsic_hcd *mehci)
 		/* Enable HSIC mode in HSIC_CFG register */
 		ulpi_write(mehci, 0xA9, 0x30);
 	}
+
+	temp = readl_relaxed(USB_GENCONFIG2);
+	temp &= ~GENCFG2_SYS_CLK_HOST_DEV_GATE_EN;
+	writel_relaxed(temp, USB_GENCONFIG2);
 
 	/*disable auto resume*/
 	ulpi_write(mehci, ULPI_IFC_CTRL_AUTORESUME, ULPI_CLR(ULPI_IFC_CTRL));
@@ -1871,6 +1876,12 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 	struct msm_hsic_hcd *mehci = hcd_to_hsic(hcd);
 	struct msm_hsic_host_platform_data *pdata = mehci->dev->platform_data;
 
+	/* If the device was removed no need to call pm_runtime_disable */
+	if (pdev->dev.power.power_state.event != PM_EVENT_INVALID)
+		pm_runtime_disable(&pdev->dev);
+
+	pm_runtime_set_suspended(&pdev->dev);
+
 	/* Remove the HCD prior to releasing our resources. */
 	usb_remove_hcd(hcd);
 
@@ -1899,7 +1910,6 @@ static int __devexit ehci_hsic_msm_remove(struct platform_device *pdev)
 
 	ehci_hsic_msm_debugfs_cleanup();
 	device_init_wakeup(&pdev->dev, 0);
-	pm_runtime_set_suspended(&pdev->dev);
 
 	destroy_workqueue(ehci_wq);
 
