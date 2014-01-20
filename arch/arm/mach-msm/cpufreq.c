@@ -464,8 +464,7 @@ static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		break;
 	case CPU_UP_PREPARE:
 		if (is_clk) {
-			rc = clk_prepare_enable(cpu_clk[cpu]);
-			if (rc < 0)
+			if (clk_prepare_enable(cpu_clk[cpu]) < 0)
 				return NOTIFY_BAD;
 			update_l2_bw(&cpu);
 		}
