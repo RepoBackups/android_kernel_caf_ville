@@ -4424,7 +4424,8 @@ static void tcp_sack_remove(struct tcp_sock *tp)
 			WARN_ON(before(tp->rcv_nxt, sp->end_seq));
 
 			/* Zap this SACK, by moving forward any other SACKS. */
-			for (i=this_sack+1; i < num_sacks; i++)
+			//in include/linux/tcp.h is defined as struct tcp_sack_block selective_acks[4];
+			for (i=this_sack+1; i < num_sacks && i < 4; i++)
 				tp->selective_acks[i-1] = tp->selective_acks[i];
 			num_sacks--;
 			continue;

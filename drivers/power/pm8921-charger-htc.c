@@ -6581,7 +6581,7 @@ static void ext_usb_vbatdet_irq_handler(struct work_struct *w)
 
 static void ext_usb_chgdone_irq_handler(struct work_struct *w)
 {
-	int result =0;
+	int result = 0;
 
 	pm8921_get_batt_voltage(&result);
 

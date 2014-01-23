@@ -1447,7 +1447,7 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 	struct sock *other = NULL;
 	int namelen = 0; /* fake GCC */
 	int err;
-	unsigned hash  = 0;
+	unsigned hash = 0;
 	struct sk_buff *skb;
 	long timeo;
 	struct scm_cookie tmp_scm;

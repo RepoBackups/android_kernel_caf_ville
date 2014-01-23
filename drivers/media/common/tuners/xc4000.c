@@ -933,7 +933,7 @@ static int check_firmware(struct dvb_frontend *fe, unsigned int type,
 	struct xc4000_priv         *priv = fe->tuner_priv;
 	struct firmware_properties new_fw;
 	int			   rc = 0, is_retry = 0;
-	u16			   hwmodel= 0;
+	u16			   hwmodel = 0;
 	v4l2_std_id		   std0;
 	u8			   hw_major = 0, hw_minor = 0, fw_major = 0,
 				   fw_minor = 0;
