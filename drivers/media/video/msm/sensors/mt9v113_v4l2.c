@@ -350,7 +350,7 @@ static int mt9v113_i2c_check_bit(unsigned short saddr, unsigned short raddr,
 unsigned short bit, int check_state)
 {
 	int k;
-	unsigned short check_value;
+	unsigned short check_value = 0;
 	unsigned short check_bit;
 	check_bit = 0x0001 << bit;
 	for (k = 0; k < CHECK_STATE_TIME; k++) {
