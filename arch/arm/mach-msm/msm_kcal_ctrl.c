@@ -571,7 +571,7 @@ int __init kcal_ctrl_init(void)
 #endif
 	unsigned int addr;
 
-	addr =  kallsyms_lookup_name("update_preset_lcdc_lut");
+	addr =  kallsyms_lookup_name("update_lcdc_lut");
 	*(funcPtr *)addr = (funcPtr)update_lcdc_lut;
 
 	platform_add_devices(msm_panel_devices,
