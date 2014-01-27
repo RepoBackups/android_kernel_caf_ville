@@ -96,6 +96,8 @@ extern int emmc_partition_read_proc(char *page, char **start, off_t off,
 extern int dying_processors_read_proc(char *page, char **start, off_t off,
 		int count, int *eof, void *data);
 
+extern int get_partition_num_by_name(char *name);
+
 #ifdef CONFIG_FB_MSM_HDMI_MHL
 typedef struct {
 	uint8_t format;
@@ -168,6 +170,11 @@ enum rawchip_enable_type {
 	RAWCHIP_MIPI_BYPASS,
 };
 
+enum hdr_mode_type {
+	NON_HDR_MODE,
+	HDR_MODE,
+};
+
 enum camera_vreg_type {
 	REG_LDO,
 	REG_VS,
@@ -187,6 +194,19 @@ struct camera_vreg_t {
 	int min_voltage;
 	int max_voltage;
 	int op_mode;
+};
+
+enum msm_camera_pixel_order_default {
+	MSM_CAMERA_PIXEL_ORDER_GR,
+	MSM_CAMERA_PIXEL_ORDER_RG,
+	MSM_CAMERA_PIXEL_ORDER_BG,
+	MSM_CAMERA_PIXEL_ORDER_GB,
+};
+
+enum sensor_mount_angle {
+	ANGLE_90,
+	ANGLE_180,
+	ANGLE_270,
 };
 
 enum htc_camera_image_type_board {
