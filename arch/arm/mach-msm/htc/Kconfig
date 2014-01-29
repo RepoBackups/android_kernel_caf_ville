@@ -26,11 +26,6 @@ config HTC_BATT_8960
 	default n
 	bool "HTC battery driver for MSM8960"
 
-config FORCE_FAST_CHARGE
-	depends on HTC_BATT_8960
-	bool "Enable fast charge support for HTC MSM8960"
-	default y
-
 config HTC_HEADSET_MGR
 	tristate "HTC headset manager driver"
 	default n
