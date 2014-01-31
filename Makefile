@@ -349,20 +349,15 @@ CHECK		= sparse
 # warnings and causes the build to stop upon encountering them.
 CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
-CUSTOM_FLAG	= -fgcse-lm -fgcse-sm -fsched-spec-load -fgcse-after-reload \
-		  -fforce-addr -ffast-math  -fsingle-precision-constant \
-		  -mcpu=cortex-a15 -mtune=cortex-a15 -mfpu=neon-vfpv4 -ftree-vectorize  \
-		  -mvectorize-with-neon-quad -marm \
-		  -funroll-loops -mvectorize-with-neon-quad -pipe \
-		  #-floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
-		  -munaligned-access -fpredictive-commoning
-
-CFLAGS_MODULE   = -DMODULE -fno-pic $(CUSTOM_FLAG)
-AFLAGS_MODULE   = -DMODULE $(CUSTOM_FLAG)
-LDFLAGS_MODULE  = 
-CFLAGS_KERNEL	= $(CUSTOM_FLAG)
-AFLAGS_KERNEL	= $(CUSTOM_FLAG)
+CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
+		  -Wbitwise -Wno-return-void $(CF)
+CFLAGS_MODULE   =
+AFLAGS_MODULE   =
+LDFLAGS_MODULE  =
+CFLAGS_KERNEL	=
+AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
 # Needed to be compatible with the O= option
