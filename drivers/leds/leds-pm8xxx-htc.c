@@ -688,6 +688,7 @@ static ssize_t pm8xxx_led_blink_store(struct device *dev,
 	struct led_classdev *led_cdev;
 	struct pm8xxx_led_data *ldata;
 	int val;
+	int level, offset;
 
 	val = -1;
 	sscanf(buf, "%u", &val);
