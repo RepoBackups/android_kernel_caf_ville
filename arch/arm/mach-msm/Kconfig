@@ -2640,7 +2640,7 @@ config MSM_L2_ERP_2BIT_PANIC
 
 config MSM_DCVS
 	bool "Use MSM DCVS for CPU/GPU Frequency control"
-	depends on MSM_SCM
+	depends on MSM_SCM && !MSM_MPDEC
 	help
 	  Enable support for MSM DCVS to control all CPU and GPU core frequencies.
 	  The DCVS manager allows idle driver to feed the idle information to the
