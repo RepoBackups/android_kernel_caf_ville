@@ -916,7 +916,7 @@ static ssize_t pm8xxx_led_off_timer_store(struct device *dev,
 	led_cdev = (struct led_classdev *) dev_get_drvdata(dev);
 	ldata = container_of(led_cdev, struct pm8xxx_led_data, cdev);
 
-#ifdef CONFIG_LEDS_PM8xxx_multiplier
+#ifdef CONFIG_LEDS_PM8XXX_multiplier
 	switch (off_timer_multiplier) {
 		case OFF_TIMER_INFINITE:	{
 							/* If infinate notification set, don't set any timer */
