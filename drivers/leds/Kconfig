@@ -300,7 +300,7 @@ config LEDS_PM8XXX
 	  be called leds-pmic8xxx.
 
 config LEDS_PM8XXX_multiplier
-	bool "LED off timer multiplier for PM8058"
+	bool "LED off timer multiplier for PM8XXX"
 	depends on LEDS_PM8XXX
 	help
 	  This option allow to use a multiplier for the off timer of LED

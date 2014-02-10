@@ -26,7 +26,7 @@
 #include <linux/mfd/pm8xxx/pwm.h>
 #include <linux/leds-pm8xxx-htc.h>
 
-#ifdef CONFIG_LEDS_PM8058_multiplier
+#ifdef CONFIG_LEDS_PM8XXX_multiplier
 #include <linux/leds-pm8xxx-multiplier.h>
 #endif
 
@@ -920,18 +920,18 @@ static ssize_t pm8xxx_led_off_timer_store(struct device *dev,
 	switch (off_timer_multiplier) {
 		case OFF_TIMER_INFINITE:	{
 							/* If infinate notification set, don't set any timer */
-							LED_INFO_LOG("Not setting %s off_timer to %d min %d sec\n",
+							LED_INFO("Not setting %s off_timer to %d min %d sec\n",
 											     led_cdev->name, min, sec);
 							return -EINVAL;
 						}
 		case OFF_TIMER_NORMAL:		{
-							LED_INFO_LOG("Setting %s off_timer to %d min %d sec\n",
+							LED_INFO("Setting %s off_timer to %d min %d sec\n",
 											   led_cdev->name, min, sec);
 
 							off_timer = min * 60 + sec;
 						}
 		default:			{
-							LED_INFO_LOG("Setting %s off_timer to %d min %d sec multiplied by %d\n",
+							LED_INFO("Setting %s off_timer to %d min %d sec multiplied by %d\n",
 											   led_cdev->name, min, sec, off_timer_multiplier);
 
 							off_timer = (min * 60 + sec) * off_timer_multiplier;
