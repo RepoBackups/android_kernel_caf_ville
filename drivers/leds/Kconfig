@@ -299,6 +299,13 @@ config LEDS_PM8XXX
 	  To compile this driver as a module, choose M here: the module will
 	  be called leds-pmic8xxx.
 
+config LEDS_PM8XXX_multiplier
+	bool "LED off timer multiplier for PM8058"
+	depends on LEDS_PM8XXX
+	help
+	  This option allow to use a multiplier for the off timer of LED
+	  notifications (0 = infinite, else is normal time x multiplier.
+
 config BLN
 	bool "Button light notification support"
 	depends on LEDS_PM8XXX

@@ -26,6 +26,10 @@
 #include <linux/mfd/pm8xxx/pwm.h>
 #include <linux/leds-pm8xxx-htc.h>
 
+#ifdef CONFIG_LEDS_PM8058_multiplier
+#include <linux/leds-pm8xxx-multiplier.h>
+#endif
+
 #ifdef CONFIG_BLN
 #include <linux/input.h>
 #include <linux/input/cy8c_cs.h>
@@ -912,8 +916,31 @@ static ssize_t pm8xxx_led_off_timer_store(struct device *dev,
 	led_cdev = (struct led_classdev *) dev_get_drvdata(dev);
 	ldata = container_of(led_cdev, struct pm8xxx_led_data, cdev);
 
+#ifdef CONFIG_LEDS_PM8xxx_multiplier
+	switch (off_timer_multiplier) {
+		case OFF_TIMER_INFINITE:	{
+							/* If infinate notification set, don't set any timer */
+							LED_INFO_LOG("Not setting %s off_timer to %d min %d sec\n",
+											     led_cdev->name, min, sec);
+							return -EINVAL;
+						}
+		case OFF_TIMER_NORMAL:		{
+							LED_INFO_LOG("Setting %s off_timer to %d min %d sec\n",
+											   led_cdev->name, min, sec);
+
+							off_timer = min * 60 + sec;
+						}
+		default:			{
+							LED_INFO_LOG("Setting %s off_timer to %d min %d sec multiplied by %d\n",
+											   led_cdev->name, min, sec, off_timer_multiplier);
+
+							off_timer = (min * 60 + sec) * off_timer_multiplier;
+						}
+	}
+	#else
 	LED_INFO("Setting %s off_timer to %d min %d sec \n", led_cdev->name, min, sec);
 	off_timer = min * 60 + sec;
+	#endif
 
 	alarm_cancel(&ldata->led_alarm);
 	cancel_work_sync(&ldata->led_work);
