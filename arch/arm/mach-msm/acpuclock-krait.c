@@ -53,6 +53,26 @@
 static unsigned int krait_chip_variant = 0;
 #endif
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+int volt_switch = 0;
+
+static int __init krait_read_uvt_cmdline(char *uvt)
+{
+	if (strcmp(uvt, "1") == 0) {
+		printk(KERN_INFO "[cmdline_uvt]: Undervolt Table enabled. | uvt='%s'", uvt);
+		volt_switch = 1;
+	} else if (strcmp(uvt, "0") == 0) {
+		printk(KERN_INFO "[cmdline_uvt]: Undervolt Table disabled. | uvt='%s'", uvt);
+		volt_switch = 0;
+	} else {
+		printk(KERN_INFO "[cmdline_uvt]: No valid input found. Undervolt Table disabled. | uvt='%s'", uvt);
+		volt_switch = 0;
+	}
+	return 1;
+}
+__setup("uvt=", krait_read_uvt_cmdline);
+#endif
+
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
 
@@ -1074,7 +1094,12 @@ static struct notifier_block __cpuinitdata acpuclk_cpu_notifier = {
 static const int __init krait_needs_vmin(void)
 {
 #ifdef CONFIG_BYPASS_KRAIT_NEEDS_VMIN
-	return 0;
+#ifdef CONFIG_CMDLINE_OPTIONS
+	if (volt_switch == 1)
+		return 0;
+#else
+		return 0;
+#endif
 #endif
 	switch (read_cpuid_id()) {
 	case 0x511F04D0: /* KR28M2A20 */
