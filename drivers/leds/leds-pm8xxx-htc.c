@@ -87,7 +87,25 @@ static int lut_coefficient = 100;
 static int dutys_array[64];
 
 #ifdef CONFIG_BLN
-static int bln = 1; 
+static int bln = 0; 
+
+#ifdef CONFIG_CMDLINE_OPTIONS
+static int __init pm8xxx_read_blncfg_cmdline(char *blncfg)
+{
+	if (strcmp(blncfg, "1") == 0) {
+		printk(KERN_INFO "[cmdline_blncfg]: BLN enabled. | blncfg='%s'", blncfg);
+		bln = 1;
+	} else if (strcmp(blncfg, "0") == 0) {
+		printk(KERN_INFO "[cmdline_blncfg]: BLN disabled. | blncfg='%s'", blncfg);
+		bln = 0;
+	} else {
+		printk(KERN_INFO "[cmdline_blncfg]: No valid input found. BLN disabled. | blncfg='%s'", blncfg);
+		bln = 0;
+	}
+	return 1;
+}
+__setup("blncfg=", pm8xxx_read_blncfg_cmdline);
+#endif
 #endif
 
 u8 pm8xxxx_led_pwm_mode(int flag)
