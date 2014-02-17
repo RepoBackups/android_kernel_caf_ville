@@ -81,7 +81,7 @@ struct cpu_freq {
 
 static DEFINE_PER_CPU(struct cpu_freq, cpu_freq_info);
 
-#ifdef CONFIG_CMDLINE_OPTIONS
+#ifdef CONFIG_CMDLINE_OPTIONS2
 /*
  * start cmdline_khz
  */
@@ -495,15 +495,15 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	/* set safe default min and max speeds 
 	policy->max = 1512000;
 	policy->min = 384000;*/
-	return 0;
-
-#ifdef CONFIG_CMDLINE_OPTIONS
+	
+#ifdef CONFIG_CMDLINE_OPTIONS2
 	policy->max = cmdline_maxkhz;
 	policy->min = cmdline_minkhz;
 #else 
 	policy->max = CONFIG_MSM_CPU_FREQ_MAX;
 	policy->min = CONFIG_MSM_CPU_FREQ_MIN;
 #endif
+	return 0;
 }
 
 static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,

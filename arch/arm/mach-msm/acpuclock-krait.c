@@ -1095,7 +1095,7 @@ static void __init krait_apply_vmin(struct acpu_level *tbl)
 	}
 }
 
-#ifdef CONFIG_CMDLINE_OPTIONS
+#ifdef CONFIG_CMDLINE_OPTIONS2
 uint32_t acpu_check_khz_value(unsigned long khz)
 {
 	struct acpu_level *f;

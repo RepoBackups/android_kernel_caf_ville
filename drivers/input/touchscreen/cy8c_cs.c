@@ -115,6 +115,44 @@ static int __init cy8c_read_s2w_cmdline(char *s2w)
 	return 1;
 }
 __setup("s2w=", cy8c_read_s2w_cmdline);
+
+static int __init cy8c_read_d2w_cmdline(char *d2w)
+{
+	if (strcmp(d2w, "1") == 0) {
+		printk(KERN_INFO "[cmdline_d2w]: Doubletap2Wake enabled on button 1. | d2w='%s'", d2w);
+		d2w_switch = 1;
+	} else if (strcmp(d2w, "2") == 0) {
+		printk(KERN_INFO "[cmdline_d2w]: Doubletap2Wake enabled on button 2. | d2w='%s'", d2w);
+		d2w_switch = 2;
+	} else if (strcmp(d2w, "3") == 0) {
+		printk(KERN_INFO "[cmdline_d2w]: Doubletap2Wake enabled on button 3. | d2w='%s'", d2w);
+		d2w_switch = 3;
+	} else if (strcmp(d2w, "0") == 0) {
+		printk(KERN_INFO "[cmdline_d2w]: Doubletap2Wake disabled. | d2w='%s'", d2w);
+		d2w_switch = 0;
+	} else {
+		printk(KERN_INFO "[cmdline_d2w]: No valid input found. Doubletap2Wake disabled. | s2w='%s'", d2w);
+		d2w_switch = 0;
+	}
+	return 1;
+}
+__setup("d2w=", cy8c_read_d2w_cmdline);
+
+static int __init cy8c_read_pdt_cmdline(char *pdt)
+{
+	if (strcmp(pdt, "1") == 0) {
+		printk(KERN_INFO "[cmdline_pdt]: Pocket Detect enabled. | pdt='%s'", pdt);
+		pocket_detect = 1;
+	} else if (strcmp(pdt, "0") == 0) {
+		printk(KERN_INFO "[cmdline_pdt]: Pocket Detect disabled. | pdt='%s'", pdt);
+		pocket_detect = 0;
+	} else {
+		printk(KERN_INFO "[cmdline_pdt]: No valid input found. Pocket Detect disabled. | s2w='%s'", pdt);
+		pocket_detect = 0;
+	}
+	return 1;
+}
+__setup("pdt=", cy8c_read_pdt_cmdline);
 #endif
 
 extern void sweep2wake_setdev(struct input_dev * input_device) {
