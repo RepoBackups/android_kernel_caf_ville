@@ -398,6 +398,12 @@ out:
  * Write out information from cpufreq_driver->policy[cpu]; object must be
  * "unsigned int".
  */
+#define show_one(file_name, object)			\
+static ssize_t show_##file_name				\
+(struct cpufreq_policy *policy, char *buf)		\
+{							\
+	return sprintf(buf, "%u\n", policy->object);	\
+}
 
 #ifdef CONFIG_CMDLINE_OPTIONS
 #define show_one_cpuinfomaxfreq(file_name, object)		\
@@ -412,7 +418,7 @@ static ssize_t show_##file_name					\
 }
 show_one_cpuinfomaxfreq(cpuinfo_max_freq, cpuinfo.max_freq);
 #else
-show_one(cpuinfo_max_freq, max);
+show_one(cpuinfo_max_freq, cpuinfo.max_freq);
 #endif
 show_one(cpuinfo_min_freq, cpuinfo.min_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);

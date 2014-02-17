@@ -23,6 +23,10 @@
 #include <linux/cpu.h>
 #include <linux/regulator/consumer.h>
 #include <linux/iopoll.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/seq_file.h>
+#include <linux/debugfs.h>
+#endif
 
 #include <asm/mach-types.h>
 #include <asm/cpu.h>
@@ -44,6 +48,10 @@
 #define PRI_SRC_SEL_SEC_SRC	0
 #define PRI_SRC_SEL_HFPLL	1
 #define PRI_SRC_SEL_HFPLL_DIV2	2
+
+#ifdef CONFIG_DEBUG_FS
+static unsigned int krait_chip_variant = 0;
+#endif
 
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
@@ -478,7 +486,10 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 
 	if (cpu > num_possible_cpus())
 		return -EINVAL;
-
+#ifdef CONFIG_CMDLINE_OPTIONS
+	if ((cmdline_scroff == true) && (rate >cmdline_maxscroff))
+	    rate = cmdline_maxscroff;
+#endif
 	if (reason == SETRATE_CPUFREQ || reason == SETRATE_HOTPLUG)
 		mutex_lock(&driver_lock);
 
@@ -1087,6 +1098,49 @@ static void __init krait_apply_vmin(struct acpu_level *tbl)
 	}
 }
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+uint32_t acpu_check_khz_value(unsigned long khz)
+{
+	struct acpu_level *f;
+
+	if (khz > 1728000)
+		return CONFIG_MSM_CPU_FREQ_MAX;
+
+	if (khz < 384000)
+		return CONFIG_MSM_CPU_FREQ_MIN;
+
+	for (f = drv.acpu_freq_tbl; f->speed.khz != 0; f++) {
+		if (khz < 384000) {
+			if (f->speed.khz == (khz*1000))
+				return f->speed.khz;
+			if ((khz*1000) > f->speed.khz) {
+				f++;
+				if ((khz*1000) < f->speed.khz) {
+					f--;
+					return f->speed.khz;
+				}
+				f--;
+			}
+		}
+		if (f->speed.khz == khz) {
+			return 1;
+		}
+		if (khz > f->speed.khz) {
+			f++;
+			if (khz < f->speed.khz) {
+				f--;
+				return f->speed.khz;
+			}
+			f--;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(acpu_check_khz_value);
+/* end cmdline_khz */
+#endif
+
 void __init get_krait_bin_format_a(void __iomem *base, struct bin_info *bin)
 {
 	u32 pte_efuse = readl_relaxed(base);
@@ -1151,9 +1205,15 @@ static struct pvs_table * __init select_freq_plan(
 
 	if (bin.pvs_valid) {
 		drv.pvs_bin = bin.pvs;
+#ifdef CONFIG_DEBUG_FS
+	        krait_chip_variant = drv.pvs_bin;
+#endif
 		dev_info(drv.dev, "ACPU PVS: %d\n", drv.pvs_bin);
 	} else {
 		drv.pvs_bin = 0;
+#ifdef CONFIG_DEBUG_FS
+	        krait_chip_variant = drv.pvs_bin;
+#endif
 		dev_warn(drv.dev, "ACPU PVS: Defaulting to %d\n",
 			 drv.pvs_bin);
 	}
@@ -1237,6 +1297,41 @@ static void __init hw_init(void)
 
 	bus_init(l2_level);
 }
+
+#ifdef CONFIG_DEBUG_FS
+static int krait_variant_debugfs_show(struct seq_file *s, void *data)
+{
+	seq_printf(s, "Your krait chip variant is: \n");
+	seq_printf(s, "[%s] SLOW \n", ((krait_chip_variant == 0) ? "X" : " "));
+	seq_printf(s, "[%s] NOMINAL \n", ((krait_chip_variant == 1) ? "X" : " "));
+	seq_printf(s, "[%s] FAST \n", ((krait_chip_variant == 3) ? "X" : " "));
+	seq_printf(s, "[%s] FASTER \n", ((krait_chip_variant == 4) ? "X" : " "));
+
+	return 0;
+}
+
+static int krait_variant_debugfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, krait_variant_debugfs_show, inode->i_private);
+}
+
+static const struct file_operations krait_variant_debugfs_fops = {
+	.open		= krait_variant_debugfs_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init krait_variant_debugfs_init(void) {
+        struct dentry *d;
+        d = debugfs_create_file("krait_variant", S_IRUGO, NULL, NULL,
+        &krait_variant_debugfs_fops);
+        if (!d)
+                return -ENOMEM;
+        return 0;
+}
+late_initcall(krait_variant_debugfs_init);
+#endif
 
 int __init acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params)
