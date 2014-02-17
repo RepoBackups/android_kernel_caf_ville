@@ -486,10 +486,7 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 
 	if (cpu > num_possible_cpus())
 		return -EINVAL;
-#ifdef CONFIG_CMDLINE_OPTIONS
-	if ((cmdline_scroff == true) && (rate >cmdline_maxscroff))
-	    rate = cmdline_maxscroff;
-#endif
+
 	if (reason == SETRATE_CPUFREQ || reason == SETRATE_HOTPLUG)
 		mutex_lock(&driver_lock);
 
@@ -925,7 +922,7 @@ static void __init bus_init(const struct l2_level *l2_level)
 
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 
-#define HFPLL_MIN_VDD	 800000
+#define HFPLL_MIN_VDD		 800000
 #define HFPLL_MAX_VDD    1450000
 
 ssize_t acpuclk_get_vdd_levels_str(char *buf) {

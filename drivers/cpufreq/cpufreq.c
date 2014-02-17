@@ -418,7 +418,7 @@ static ssize_t show_##file_name					\
 }
 show_one_cpuinfomaxfreq(cpuinfo_max_freq, cpuinfo.max_freq);
 #else
-show_one(cpuinfo_max_freq, cpuinfo.max_freq);
+show_one(cpuinfo_max_freq, max);
 #endif
 show_one(cpuinfo_min_freq, cpuinfo.min_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);

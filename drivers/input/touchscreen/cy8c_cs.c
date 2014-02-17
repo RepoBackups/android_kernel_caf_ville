@@ -91,8 +91,8 @@ extern uint8_t touchscreen_is_on(void) {
 #define DT2W_TIMEOUT_MIN 150
 
 int pocket_detect = 0; 
-int s2w_switch = 1;
-int dt2w_switch = 2;
+int s2w_switch = 0;
+int dt2w_switch = 0;
 int s2w_h[2][3] = {{0, 0, 0}, {0, 0, 0}};
 cputime64_t s2w_t[3] = {0, 0, 0};
 cputime64_t dt2w_time[2] = {0, 0}; 
