@@ -2569,7 +2569,7 @@ int power_key_check_in_pocket_no_light(void)
 {
 	struct cm3629_info *lpi = lp_info;
 
-	if(plsensor_chip_state) /*pl-sensor no ack */
+	if(!is_probe_success) /*pl-sensor no ack */
 		return 0;
 
 	pocket_mode_flag = 1;
