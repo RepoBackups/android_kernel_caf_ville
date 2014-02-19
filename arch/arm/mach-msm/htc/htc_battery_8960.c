@@ -2303,8 +2303,6 @@ static void htc_battery_early_suspend(struct early_suspend *h)
 #ifdef CONFIG_HTC_BATT_ALARM
 	batt_set_voltage_alarm_mode(BATT_ALARM_DISABLE_MODE);
 #endif
-	htc_batt_schedule_batt_info_update();
-	return;
 }
 
 static void htc_battery_late_resume(struct early_suspend *h)
@@ -2314,7 +2312,6 @@ static void htc_battery_late_resume(struct early_suspend *h)
 #ifdef CONFIG_HTC_BATT_ALARM
 	batt_set_voltage_alarm_mode(BATT_ALARM_CRITICAL_MODE);
 #endif
-	htc_batt_schedule_batt_info_update();
 }
 #endif 
 
