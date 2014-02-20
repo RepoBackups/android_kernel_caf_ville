@@ -49,7 +49,7 @@
 #define BOOSTED_SAMPLING_DOWN_FACTOR		(10)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(75)
+#define MICRO_FREQUENCY_UP_THRESHOLD		(95)
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(15000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
@@ -1230,16 +1230,14 @@ enum {
 
 enum {	
 	BOOT_CPU = 0,	
-	NON_BOOT_CPU1,
-	NON_BOOT_CPU2,
-	NON_BOOT_CPU3,
+	NON_BOOT_CPU
 };
 
 #define SAMPLE_DURATION_MSEC	(10*1000) // 10 secs >= 10000 msec
 #define ACTIVE_DURATION_MSEC	(3*60*1000) // 3 mins
 #define INACTIVE_DURATION_MSEC	(1*60*1000) // 1 mins
-#define MAX_ACTIVE_FREQ_LIMIT	30 // %
-#define MAX_INACTIVE_FREQ_LIMIT	20 // %
+#define MAX_ACTIVE_FREQ_LIMIT	35 // %
+#define MAX_INACTIVE_FREQ_LIMIT	25 // %
 #define ACTIVE_MAX_FREQ		CONFIG_INTELLI_MAX_ACTIVE_FREQ		// 1.512GHZ
 #define INACTIVE_MAX_FREQ	CONFIG_INTELLI_MAX_INACTIVE_FREQ	// 1.134GHZ
 
@@ -1369,18 +1367,11 @@ static void do_dbs_timer(struct work_struct *work)
 				//pr_info("LMF: CPU0 set max freq to: %lu\n", lmf_active_max_limit);
 				cpufreq_set_limits(BOOT_CPU, SET_MAX, lmf_active_max_limit);
 				
-				//pr_info("LMF: CPUX set max freq to: %lu\n", lmf_active_max_limit);
-				if (cpu_online(NON_BOOT_CPU1) ||
-					cpu_online(NON_BOOT_CPU2) ||
-					cpu_online(NON_BOOT_CPU3)) {
-					cpufreq_set_limits(NON_BOOT_CPU1, SET_MAX, lmf_active_max_limit);
-					cpufreq_set_limits(NON_BOOT_CPU2, SET_MAX, lmf_active_max_limit);
-					cpufreq_set_limits(NON_BOOT_CPU3, SET_MAX, lmf_active_max_limit);
-				} else {
-					cpufreq_set_limits_off(NON_BOOT_CPU1, SET_MAX, lmf_active_max_limit);
-					cpufreq_set_limits_off(NON_BOOT_CPU2, SET_MAX, lmf_active_max_limit);
-					cpufreq_set_limits_off(NON_BOOT_CPU3, SET_MAX, lmf_active_max_limit);
-				}
+				//pr_info("LMF: CPU1 set max freq to: %lu\n", lmf_active_max_limit);
+				if (cpu_online(NON_BOOT_CPU))
+					cpufreq_set_limits(NON_BOOT_CPU, SET_MAX, lmf_active_max_limit);
+				else
+					cpufreq_set_limits_off(NON_BOOT_CPU, SET_MAX, lmf_active_max_limit);
 			}
 			
 			jiffies_old = 0;
@@ -1401,7 +1392,7 @@ static void do_dbs_timer(struct work_struct *work)
 		unsigned long load_total  = 0;
 		unsigned long jiffies_cur = jiffies;
 
-		if (cpu == NON_BOOT_CPU1 || cpu == NON_BOOT_CPU2 || cpu == NON_BOOT_CPU3)
+		if (cpu == NON_BOOT_CPU)
 		{
 			delay_msec = (dbs_tuners_ins.sampling_rate * dbs_info->rate_mult) / 1000;
 			policy = dbs_info->cur_policy;
@@ -1486,18 +1477,11 @@ static void do_dbs_timer(struct work_struct *work)
 								//pr_info("LMF: CPU0 set max freq to: %lu\n", lmf_inactive_max_limit);
 								cpufreq_set_limits(BOOT_CPU, SET_MAX, lmf_inactive_max_limit);
 								
-								//pr_info("LMF: CPUX set max freq to: %lu\n", lmf_inactive_max_limit);
-								if (cpu_online(NON_BOOT_CPU1) ||
-									cpu_online(NON_BOOT_CPU2) ||
-									cpu_online(NON_BOOT_CPU3)) {
-									cpufreq_set_limits(NON_BOOT_CPU1, SET_MAX, lmf_inactive_max_limit);
-									cpufreq_set_limits(NON_BOOT_CPU2, SET_MAX, lmf_inactive_max_limit);
-									cpufreq_set_limits(NON_BOOT_CPU3, SET_MAX, lmf_inactive_max_limit);
-								} else {
-									cpufreq_set_limits_off(NON_BOOT_CPU1, SET_MAX, lmf_inactive_max_limit);
-									cpufreq_set_limits_off(NON_BOOT_CPU2, SET_MAX, lmf_inactive_max_limit);
-									cpufreq_set_limits_off(NON_BOOT_CPU3, SET_MAX, lmf_inactive_max_limit);
-								}
+								//pr_info("LMF: CPU1 set max freq to: %lu\n", lmf_inactive_max_limit);
+								if (cpu_online(NON_BOOT_CPU))
+									cpufreq_set_limits(NON_BOOT_CPU, SET_MAX, lmf_inactive_max_limit);
+								else
+									cpufreq_set_limits_off(NON_BOOT_CPU, SET_MAX, lmf_inactive_max_limit);
 							}
 							else
 							{
@@ -1533,19 +1517,11 @@ static void do_dbs_timer(struct work_struct *work)
 								//pr_info("LMF: CPU0 set max freq to: %lu\n", lmf_active_max_limit);
 								cpufreq_set_limits(BOOT_CPU, SET_MAX, lmf_active_max_limit);
 								
-								//pr_info("LMF: CPUX set max freq to: %lu\n", lmf_active_max_limit);
-								if (cpu_online(NON_BOOT_CPU1) ||
-									cpu_online(NON_BOOT_CPU2) ||
-									cpu_online(NON_BOOT_CPU3)) {
-									cpufreq_set_limits(NON_BOOT_CPU1, SET_MAX, lmf_active_max_limit);
-									cpufreq_set_limits(NON_BOOT_CPU2, SET_MAX, lmf_active_max_limit);
-									cpufreq_set_limits(NON_BOOT_CPU3, SET_MAX, lmf_active_max_limit);
-								} else {
-									cpufreq_set_limits_off(NON_BOOT_CPU1, SET_MAX, lmf_active_max_limit);
-									cpufreq_set_limits_off(NON_BOOT_CPU2, SET_MAX, lmf_active_max_limit);
-									cpufreq_set_limits_off(NON_BOOT_CPU3, SET_MAX, lmf_active_max_limit);
-								}
-
+								//pr_info("LMF: CPU1 set max freq to: %lu\n", lmf_active_max_limit);
+								if (cpu_online(NON_BOOT_CPU))
+									cpufreq_set_limits(NON_BOOT_CPU, SET_MAX, lmf_active_max_limit);
+								else
+									cpufreq_set_limits_off(NON_BOOT_CPU, SET_MAX, lmf_active_max_limit);
 							}
 							else
 							{
