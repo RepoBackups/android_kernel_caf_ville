@@ -1,5 +1,5 @@
 /*
- * BFQ-v7r1 for 3.4.0: data structures and common functions prototypes.
+ * BFQ-v7r2 for 3.4.0: data structures and common functions prototypes.
  *
  * Based on ideas and code from CFQ:
  * Copyright (C) 2003 Jens Axboe <axboe@kernel.dk>
@@ -186,20 +186,26 @@ struct bfq_group;
  * @seek_mean: mean seek distance
  * @last_request_pos: position of the last request enqueued
  * @pid: pid of the process owning the queue, used for logging purposes.
- * @last_rais_start_time: last (idle -> weight-raised) transition attempt
+ * @last_rais_start_finish: start time of the current weight-raising period if
+ *                          the @bfq-queue is being weight-raised, otherwise
+ *                          finish time of the last weight-raising period
  * @raising_cur_max_time: current max raising time for this queue
+ * @soft_rt_next_start: minimum time instant such that, only if a new request
+ *                      is enqueued after this time instant in an idle
+ *                      @bfq_queue with no outstanding requests, then the
+ *                      task associated with the queue it is deemed as soft
+ *                      real-time (see the comments to the function
+ *                      bfq_bfqq_softrt_next_start())
  * @last_idle_bklogged: time of the last transition of the @bfq_queue from
  *                      idle to backlogged
  * @service_from_backlogged: cumulative service received from the @bfq_queue
  *                           since the last transition from idle to backlogged
- * @bic: pointer to the bfq_io_cq owning the bfq_queue, set to %NULL if the
- *	 queue is shared
  *
- * A bfq_queue is a leaf request queue; it can be associated to an io_context
- * or more (if it is an async one).  @cgroup holds a reference to the
- * cgroup, to be sure that it does not disappear while a bfqq still
- * references it (mostly to avoid races between request issuing and task
- * migration followed by cgroup distruction).
+ * A bfq_queue is a leaf request queue; it can be associated with an io_context
+ * or more, if it is async or shared between cooperating processes. @cgroup
+ * holds a reference to the cgroup, to be sure that it does not disappear while
+ * a bfqq still references it (mostly to avoid races between request issuing and
+ * task migration followed by cgroup destruction).
  * All the fields are protected by the queue lock of the containing bfqd.
  */
 struct bfq_queue {
@@ -237,7 +243,6 @@ struct bfq_queue {
 	sector_t last_request_pos;
 
 	pid_t pid;
-	struct bfq_io_cq *bic;
 
 	/* weight-raising fields */
 	unsigned long raising_cur_max_time;
@@ -267,22 +272,11 @@ struct bfq_ttime {
  * @icq: associated io_cq structure
  * @bfqq: array of two process queues, the sync and the async
  * @ttime: associated @bfq_ttime struct
- * @raising_time_left: snapshot of the time left before weight raising ends
- *		       for the sync queue associated to this process; this
- *		       snapshot is taken to remember this value while the weight
- *		       raising is suspended because the queue is merged with a
- *		       shared queue, and is used to set @raising_cur_max_time
- *		       when the queue is split from the shared queue and its
- *		       weight is raised again
- * @saved_idle_window: same purpose as the previous field for the idle window
  */
 struct bfq_io_cq {
 	struct io_cq icq; /* must be the first member */
 	struct bfq_queue *bfqq[2];
 	struct bfq_ttime ttime;
-
-	unsigned int raising_time_left;
-	unsigned int saved_idle_window;
 };
 
 /**
@@ -424,7 +418,6 @@ enum bfqq_state_flags {
 	BFQ_BFQQ_FLAG_budget_new,	/* no completion with this budget */
 	BFQ_BFQQ_FLAG_coop,		/* bfqq is shared */
 	BFQ_BFQQ_FLAG_split_coop,	/* shared bfqq will be splitted */
-	BFQ_BFQQ_FLAG_just_split,	/* queue has just been split */
 	BFQ_BFQQ_FLAG_softrt_update,	/* needs softrt-next-start update */
 };
 
@@ -452,7 +445,6 @@ BFQ_BFQQ_FNS(sync);
 BFQ_BFQQ_FNS(budget_new);
 BFQ_BFQQ_FNS(coop);
 BFQ_BFQQ_FNS(split_coop);
-BFQ_BFQQ_FNS(just_split);
 BFQ_BFQQ_FNS(softrt_update);
 #undef BFQ_BFQQ_FNS
 
