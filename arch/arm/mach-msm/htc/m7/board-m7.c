@@ -1252,6 +1252,7 @@ static struct slim_device apq8064_slim_tabla20 = {
 	},
 };
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_3K
 static struct synaptics_virtual_key m7_vk_data[] = {
 	{
 		.index = 1,
@@ -1281,7 +1282,6 @@ static int synaptics_power_LPM(int on)
 	int rc = 0;
 
 	mutex_lock(&tp_lock);
-	pr_info("[TP] %s: enter:%d\n", __func__, on);
 
 	if (tp_reg_l15 == NULL) {
 		tp_reg_l15 = regulator_get(NULL, "8921_l15");
@@ -1303,7 +1303,6 @@ static int synaptics_power_LPM(int on)
 			mutex_unlock(&tp_lock);
 			return rc;
 		}
-		pr_info("[TP] %s: enter LPM mode\n", __func__);
 	} else {
 		rc = regulator_set_optimum_mode(tp_reg_l15, 100000);
 		if (rc < 0)
@@ -1316,8 +1315,6 @@ static int synaptics_power_LPM(int on)
 			mutex_unlock(&tp_lock);
 			return rc;
 		}
-		pr_info("[TP] %s: leave LPM mode\n", __func__);
-		usleep(10);
 	}
 	mutex_unlock(&tp_lock);
 	return rc;
@@ -2157,6 +2154,7 @@ static struct attribute *syn_properties_attrs[] = {
 static struct attribute_group syn_properties_attr_group = {
 	.attrs = syn_properties_attrs,
 };
+#endif
 
 #define MSM_WCNSS_PHYS	0x03000000
 #define MSM_WCNSS_SIZE	0x280000
@@ -3871,10 +3869,6 @@ static int m7_mpu3050_sensor_power_LPM(int on)
 
 	mutex_lock(&sensor_lock);
 
-	printk(KERN_DEBUG "[MPU][MPL3.3.7] %s, on = %d, "
-			"motion_sensor_vreg_8921_l17 = 0x%p\n",
-			__func__, on, motion_sensor_vreg_8921_l17);
-
 	if (!motion_sensor_vreg_8921_l17)
 		_GET_REGULATOR(motion_sensor_vreg_8921_l17, "8921_l17");
 
@@ -3885,8 +3879,6 @@ static int m7_mpu3050_sensor_power_LPM(int on)
 			pr_err("[MPU][MPL3.3.7] set_optimum_mode L17 to LPM"
 				" failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[MPU][MPL3.3.7]%s unlock 1\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(motion_sensor_vreg_8921_l17);
@@ -3895,8 +3887,6 @@ static int m7_mpu3050_sensor_power_LPM(int on)
 				"motion_sensor_vreg_8921_l17", rc);
 			return rc;
 		}
-		printk(KERN_DEBUG "[MPU][MPL3.3.7] %s, Set to Low Power"
-			" Mode\n", __func__);
 	} else {
 		rc = regulator_set_optimum_mode(motion_sensor_vreg_8921_l17,
 						100000);
@@ -3904,8 +3894,6 @@ static int m7_mpu3050_sensor_power_LPM(int on)
 			pr_err("[MPU][MPL3.3.7] set_optimum_mode L17 to"
 				" Normal mode failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[MPU][MPL3.3.7]%s unlock 2\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(motion_sensor_vreg_8921_l17);
@@ -3914,11 +3902,8 @@ static int m7_mpu3050_sensor_power_LPM(int on)
 				"motion_sensor_vreg_8921_l17", rc);
 			return rc;
 		}
-		printk(KERN_DEBUG "[MPU][MPL3.3.7] %s, Set to Normal Mode\n",
-			__func__);
 	}
 	mutex_unlock(&sensor_lock);
-	printk(KERN_DEBUG "[MPU][MPL3.3.7]%s unlock 3\n", __func__);
 	return 0;
 }
 
@@ -3966,10 +3951,6 @@ static int m7_g_sensor_power_LPM(int on)
 
 	mutex_lock(&sensor_lock);
 
-	printk(KERN_DEBUG "[GSNR][BMA250_BOSCH] %s, on = %d, "
-			"g_sensor_vreg_8921_l17 = 0x%p\n",
-			__func__, on, g_sensor_vreg_8921_l17);
-
 	if (!g_sensor_vreg_8921_l17)
 		_GET_REGULATOR(g_sensor_vreg_8921_l17, "8921_l17_g_sensor");
 
@@ -3979,8 +3960,6 @@ static int m7_g_sensor_power_LPM(int on)
 			pr_err("[GSNR][BMA250_BOSCH] set_optimum_mode L17 to"
 				" LPM failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GSNR][BMA250_BOSCH]%s unlock 1\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(g_sensor_vreg_8921_l17);
@@ -3988,20 +3967,14 @@ static int m7_g_sensor_power_LPM(int on)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"g_sensor_vreg_8921_l17", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GSNR][BMA250_BOSCH]%s unlock 2\n",
-					__func__);
 			return rc;
 		}
-		printk(KERN_DEBUG "[GSNR][BMA250_BOSCH] %s, Set to Low Power"
-			" Mode\n", __func__);
 	} else {
 		rc = regulator_set_optimum_mode(g_sensor_vreg_8921_l17, 100000);
 		if (rc < 0) {
 			pr_err("[GSNR][BMA250_BOSCH] set_optimum_mode L17 to"
 				" Normal mode failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GSNR][BMA250_BOSCH]%s unlock 32\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(g_sensor_vreg_8921_l17);
@@ -4009,15 +3982,10 @@ static int m7_g_sensor_power_LPM(int on)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"g_sensor_vreg_8921_l17", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GSNR][BMA250_BOSCH]%s unlock 4\n",
-					__func__);
 			return rc;
 		}
-		printk(KERN_DEBUG "[GSNR][BMA250_BOSCH] %s, Set to Normal Mode\n",
-			__func__);
 	}
 	mutex_unlock(&sensor_lock);
-	printk(KERN_DEBUG "[GSNR][BMA250_BOSCH]%s: unlock 5\n", __func__);
 	return 0;
 }
 
@@ -4039,10 +4007,6 @@ static int m7_compass_power_LPM(int on)
 
 	mutex_lock(&sensor_lock);
 
-	printk(KERN_DEBUG "[COMP][AKM8963] %s, on = %d, "
-			"compass_vreg_8921_l17 = 0x%p\n",
-			__func__, on, compass_vreg_8921_l17);
-
 	if (!compass_vreg_8921_l17)
 		_GET_REGULATOR(compass_vreg_8921_l17, "8921_l17_compass");
 
@@ -4052,8 +4016,6 @@ static int m7_compass_power_LPM(int on)
 			pr_err("[COMP][AKM8963] set_optimum_mode L17 to LPM"
 				" failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[COMP][AKM8963]%s unlock 1\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(compass_vreg_8921_l17);
@@ -4061,20 +4023,14 @@ static int m7_compass_power_LPM(int on)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"compass_vreg_8921_l17", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[COMP][AKM8963]%s unlock 2\n",
-					__func__);
 			return rc;
 		}
-		printk(KERN_DEBUG "[COMP][AKM8963] %s, Set to Low Power"
-			" Mode\n", __func__);
 	} else {
 		rc = regulator_set_optimum_mode(compass_vreg_8921_l17, 100000);
 		if (rc < 0) {
 			pr_err("[COMP][AKM8963] set_optimum_mode L17 to"
 				" Normal mode failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[COMP][AKM8963]%s unlock 3\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(compass_vreg_8921_l17);
@@ -4082,15 +4038,10 @@ static int m7_compass_power_LPM(int on)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"compass_vreg_8921_l17", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[COMP][AKM8963]%s unlock 4\n",
-					__func__);
 			return rc;
 		}
-		printk(KERN_DEBUG "[COMP][AKM8963] %s, Set to Normal Mode\n",
-			__func__);
 	}
 	mutex_unlock(&sensor_lock);
-	printk(KERN_DEBUG "[COMP][AKM8963]%s unlock 5\n", __func__);
 	return 0;
 }
 
@@ -4108,10 +4059,6 @@ static int m7_gyro_power_LPM(int on)
 
 	mutex_lock(&sensor_lock);
 
-	printk(KERN_DEBUG "[GYRO][R3GD20] %s, on = %d, "
-			"gyro_vreg_8921_l17 = 0x%p\n",
-			__func__, on, gyro_vreg_8921_l17);
-
 	if (!gyro_vreg_8921_l17)
 		_GET_REGULATOR(gyro_vreg_8921_l17, "8921_l17_gyro");
 
@@ -4121,8 +4068,6 @@ static int m7_gyro_power_LPM(int on)
 			pr_err("[GYRO][R3GD20] set_optimum_mode L17 to LPM"
 				" failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GYRO][R3GD20]%s unlock 1\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(gyro_vreg_8921_l17);
@@ -4130,20 +4075,14 @@ static int m7_gyro_power_LPM(int on)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"gyro_vreg_8921_l17", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GYRO][R3GD20]%s unlock 2\n",
-					__func__);
 			return rc;
 		}
-		printk(KERN_DEBUG "[GYRO][R3GD20] %s, Set to Low Power"
-			" Mode\n", __func__);
 	} else {
 		rc = regulator_set_optimum_mode(gyro_vreg_8921_l17, 100000);
 		if (rc < 0) {
 			pr_err("[GYRO][R3GD20] set_optimum_mode L17 to"
 				" Normal mode failed, rc = %d\n", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GYRO][R3GD20]%s unlock 3\n",
-					__func__);
 			return -EINVAL;
 		}
 		rc = regulator_enable(gyro_vreg_8921_l17);
@@ -4151,15 +4090,10 @@ static int m7_gyro_power_LPM(int on)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"gyro_vreg_8921_l17", rc);
 			mutex_unlock(&sensor_lock);
-			printk(KERN_DEBUG "[GYRO][R3GD20]%s unlock 4\n",
-					__func__);
 			return rc;
 		}
-		printk(KERN_DEBUG "[GYRO][R3GD20] %s, Set to Normal Mode\n",
-			__func__);
 	}
 	mutex_unlock(&sensor_lock);
-	printk(KERN_DEBUG "[GYRO][R3GD20]%s unlock 5\n", __func__);
 	return 0;
 }
 
@@ -4217,14 +4151,12 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 	int rc = 0;
 
 	mutex_lock(&pl_sensor_lock);
-	pr_info("[PS][cm3629] %s: pl_sensor_lock lock\n", __func__);
 
 	if (pl_reg_l16 == NULL) {
 		pl_reg_l16 = regulator_get(NULL, "8921_l16");
 		if (IS_ERR(pl_reg_l16)) {
 			pr_err("[PS][cm3629] %s: Unable to get '8921_l16' \n", __func__);
 			mutex_unlock(&pl_sensor_lock);
-			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 1\n", __func__);
 			return -ENODEV;
 		}
 	}
@@ -4237,10 +4169,8 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"pl_reg_l16", rc);
 			mutex_unlock(&pl_sensor_lock);
-			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 2\n", __func__);
 			return rc;
 		}
-		pr_info("[PS][cm3629] %s: enter lmp,OK\n", __func__);
 	} else {
 		rc = regulator_set_optimum_mode(pl_reg_l16, 100000);
 		if (rc < 0)
@@ -4250,14 +4180,10 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"pl_reg_l16", rc);
 			mutex_unlock(&pl_sensor_lock);
-			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 3\n", __func__);
 			return rc;
 		}
-		pr_info("[PS][cm3629] %s: leave lmp,OK\n", __func__);
-		usleep(10);
 	}
 	mutex_unlock(&pl_sensor_lock);
-	pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 4\n", __func__);
 	return rc;
 }
 
@@ -4664,12 +4590,14 @@ static struct i2c_board_info msm_i2c_mhl_sii9234_info[] =
 #endif /* CONFIG_FB_MSM_HDMI_MHL */
 
 static struct i2c_registry m7_i2c_devices[] __initdata = {
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_3K
 	{
 		I2C_SURF | I2C_FFA,
 		APQ_8064_GSBI3_QUP_I2C_BUS_ID,
 		msm_i2c_gsbi3_synaptics_info,
 		ARRAY_SIZE(msm_i2c_gsbi3_synaptics_info),
 	},
+#endif
 	{
 		I2C_SURF | I2C_FFA,
 		APQ_8064_GSBI1_QUP_I2C_BUS_ID,
@@ -4787,8 +4715,10 @@ static void __init apq8064ab_update_retention_spm(void)
 
 static void __init m7_common_init(void)
 {
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_3K
 	int rc = 0;
 	struct kobject *properties_kobj;
+#endif
 
 	htc_add_ramconsole_devices();
 	platform_device_register(&msm_gpio_device);
@@ -4827,8 +4757,10 @@ static void __init m7_common_init(void)
 	m7_i2c_init();
 
 	if (board_build_flag() == 1) {
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_3K
 		for (rc = 0; rc < ARRAY_SIZE(syn_ts_3k_data); rc++)
 			syn_ts_3k_data[rc].mfg_flag = 1;
+#endif
 	}
 
 	register_i2c_devices();
@@ -4867,11 +4799,13 @@ static void __init m7_common_init(void)
 	apq8064_init_dsps();
 	platform_device_register(&msm_8960_riva);
 	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_3K
 	properties_kobj = kobject_create_and_add("board_properties", NULL);
 	if (properties_kobj) {
 		rc = sysfs_create_group(properties_kobj,
 				&syn_properties_attr_group);
 	}
+#endif
 
 	headset_device_register();
 	m7_init_keypad();
