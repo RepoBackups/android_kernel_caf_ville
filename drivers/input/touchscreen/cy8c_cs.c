@@ -25,7 +25,6 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/workqueue.h>
-#include <linux/pl_sensor.h>
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 #include <linux/cm3629.h>
 #endif

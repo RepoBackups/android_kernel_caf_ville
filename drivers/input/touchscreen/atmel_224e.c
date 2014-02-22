@@ -2393,11 +2393,10 @@ static int atmel_224e_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 	ts->finger_count = 0;
 	ts->first_pressed = 0;
 
-	if (ts->psensor_status == 0) {
-		i2c_atmel_write(client,
-			get_object_address(ts, GEN_ACQUISITIONCONFIG_T8) + T8_CFG_ATCHCALST,
-			ts->ATCH_EXT, 4);
-	}
+	ts->pre_data[0] = RECALIB_NEED;
+	i2c_atmel_write(client,
+		get_object_address(ts, GEN_ACQUISITIONCONFIG_T8) + T8_CFG_ATCHCALST,
+		ts->ATCH_EXT, 4);
 
 	if (ts->workaround & TW_SHIFT)
 		i2c_atmel_write_byte_data(ts->client,
