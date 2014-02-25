@@ -133,9 +133,6 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 	int decision = 0;
 
 	if (sleepy_plug_active == 1) {
-#ifdef DEBUG_SLEEPY_PLUG
-		pr_info("cpu_count: %u\n", cpu_count);
-#endif
 		// detect artificial loads or constant loads
 		// using msm rqstats
 
