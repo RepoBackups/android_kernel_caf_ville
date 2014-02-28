@@ -33,119 +33,98 @@
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	1
-#define SLEEPY_PLUG_MINOR_VERSION	0
+#define SLEEPY_PLUG_MINOR_VERSION	1
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
 
-#define DUAL_CORE_PERSISTENCE		5
-#define RQ_VALUE_ARRAY_DIM		10
+#define DOWN_THRESHOLD			8
+#define UP_THRESHOLD			11
+#define PEAK_THRESHOLD			30
+
+#define RQ_VALUE_ARRAY_DIM		5
 
 static DEFINE_MUTEX(sleepy_plug_mutex);
 
 struct delayed_work sleepy_plug_work;
 
+enum mp_decisions {
+	DO_NOTHING,
+	CPU_UP,
+	CPU_DOWN
+};
+
 static unsigned int sleepy_plug_active = 1;
 module_param(sleepy_plug_active, uint, 0644);
 
 static unsigned int sampling_time = 0;
-
 static bool suspended = false;
-
-static unsigned int NwNs_Threshold = 11;
-
-static unsigned int rq_values[10] = {6};
+static unsigned int rq_values[RQ_VALUE_ARRAY_DIM] = {6};
 
 static int calc_rq_avg(int last_rq_depth) {
-	int i, max = 0;
-	int avg_up = 0, avg_down = 0;
-	bool max_is_new = false;
+	int i;
+	int avg = 0;
 
 	//shift all values by 1
 	for(i = 0;i < RQ_VALUE_ARRAY_DIM-1;i++) {
 		rq_values[i] = rq_values[i+1];
+		avg += rq_values[i+1];
 	}
-
+	avg += last_rq_depth;
 	rq_values[RQ_VALUE_ARRAY_DIM-1] = last_rq_depth;
 
-	for(i = 0;i < RQ_VALUE_ARRAY_DIM;i++) {
-		if(i <= RQ_VALUE_ARRAY_DIM/2) {
-			avg_down += rq_values[i];
-		}
-		else {
-			avg_up += rq_values[i];
-		}
-
-		if(rq_values[i] > max) {
-			max = rq_values[i];
-			if(i > RQ_VALUE_ARRAY_DIM/2) {
-				max_is_new = true;
-			}
-			else {
-				max_is_new = false;
-			}
-		}
-	}
-	avg_down /= RQ_VALUE_ARRAY_DIM/2;
-	avg_up /= RQ_VALUE_ARRAY_DIM/2;
-
-	if(avg_down < avg_up && max_is_new == false) return avg_down;
-	else return avg_up;
+	return avg/RQ_VALUE_ARRAY_DIM;
 }
 
-static int mp_decision(void)
+static enum mp_decisions mp_decision(void)
 {
-	static bool first_call = true;
-	int new_state = 0;
 	int nr_cpu_online;
-	int rq_depth;
-	static cputime64_t last_time;
-	cputime64_t current_time;
-	cputime64_t this_time = 0;
+	int avg,i;
+	enum mp_decisions decision = DO_NOTHING;
 
-	current_time = ktime_to_ms(ktime_get());
-	if (first_call) {
-		first_call = false;
-	} else {
-		this_time = current_time - last_time;
+	if(rq_info.rq_avg > PEAK_THRESHOLD) {
+		for(i = 0;i < RQ_VALUE_ARRAY_DIM-1;i++) 
+			rq_values[i] = rq_values[i+1];
+		rq_values[RQ_VALUE_ARRAY_DIM-1] = rq_info.rq_avg;
+
+		avg = rq_info.rq_avg;
 	}
-
-	rq_depth = calc_rq_avg(rq_info.rq_avg);
-#ifdef DEBUG_SLEEPY_PLUG
-	pr_info(" rq_deptch = %u", rq_depth);
-#endif
+	else
+		avg = calc_rq_avg(rq_info.rq_avg);
 	nr_cpu_online = num_online_cpus();
 
-	if(nr_cpu_online == 1 && rq_depth >= NwNs_Threshold) {
-		new_state = 1;
-	}
-	else if(nr_cpu_online == 2 && rq_depth >= DUAL_CORE_PERSISTENCE) {
-		new_state = 2;
-	}
+	if(nr_cpu_online == 1 && avg >= UP_THRESHOLD)
+		decision = CPU_UP;
+	else if(nr_cpu_online == 2 && avg < DOWN_THRESHOLD)
+		decision = CPU_DOWN;
 
-	last_time = ktime_to_ms(ktime_get());
-
-	return new_state;
+#ifdef DEBUG_SLEEPY_PLUG
+	pr_info("[SLEEPY] nr_cpu_online: %d|avg: %d|max: %d|new? %d\n",nr_cpu_online,crav.avg,crav.max,crav.max_is_new == true?1:0);
+#endif
+	return decision;
 }
 
 static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 {
-	int decision = 0;
+	enum mp_decisions decision = DO_NOTHING;
 
 	if (sleepy_plug_active == 1) {
 		// detect artificial loads or constant loads
 		// using msm rqstats
 
 		decision = mp_decision();
-
+#ifdef DEBUG_SLEEPY_PLUG
+		pr_info("decision: %d\n",decision);
+#endif
 		if (!suspended) {
-			if (decision == 1) {
+			if (decision == CPU_UP) {
 				cpu_up(1);
 				sampling_time = BUSY_SAMPLING_MS;
-			} else if(decision == 0){
+			} else if(decision == CPU_DOWN){
 				cpu_down(1);
 				sampling_time = DEF_SAMPLING_MS;
-			}
+			} else if(decision == DO_NOTHING)
+				sampling_time = DEF_SAMPLING_MS;
 		}
 #ifdef DEBUG_SLEEPY_PLUG
 		else
@@ -159,9 +138,6 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 #ifdef CONFIG_POWERSUSPEND
 static void sleepy_plug_suspend(struct power_suspend *handler)
 {
-	int i;
-	int num_of_active_cores = 4;
-	
 	cancel_delayed_work_sync(&sleepy_plug_work);
 
 	mutex_lock(&sleepy_plug_mutex);
@@ -173,9 +149,6 @@ static void sleepy_plug_suspend(struct power_suspend *handler)
 
 static void __cpuinit sleepy_plug_resume(struct power_suspend *handler)
 {
-	int num_of_active_cores;
-	int i;
-
 	mutex_lock(&sleepy_plug_mutex);
 	/* keep cores awake long enough for faster wake up */
 	suspended = false;
@@ -199,9 +172,9 @@ static struct power_suspend sleepy_plug_power_suspend_driver = {
 static void sleepy_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-#ifdef DEBUG_SLEEPY_PLUG
+/*#ifdef DEBUG_SLEEPY_PLUG
 	pr_info("sleepy_plug touched!\n");
-#endif
+#endif*/
 
 	cancel_delayed_work(&sleepy_plug_work);
 
