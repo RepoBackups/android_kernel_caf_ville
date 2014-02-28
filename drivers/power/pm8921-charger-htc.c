@@ -57,14 +57,20 @@ struct delayed_work ext_usb_temp_task;
 struct delayed_work ext_usb_bms_notify_task;
 struct workqueue_struct *ext_charger_wq = NULL;
 
+//#define BATT_DEBUG
+#undef BATT_DEBUG
+
 #if defined(pr_debug)
 #undef pr_debug
 #endif
+#ifdef BATT_DEBUG
 #define pr_debug(fmt, ...) do { \
 		if (flag_enable_BMS_Charger_log) \
 			printk(KERN_INFO pr_fmt_debug(fmt), ##__VA_ARGS__); \
 	} while (0)
-
+#else
+#define pr_debug(fmt, ...) 
+#endif
 static bool flag_enable_BMS_Charger_log;
 #define BATT_LOG_BUF_LEN (1024)
 
