@@ -64,13 +64,21 @@
 
 #define PM8XXX_LPG_CTL_REGS		7
 
+//#define LED_DEBUG
+#undef LED_DEBUG
+
+#ifndef LED_DEBUG
 #define LED_DBG(fmt, ...) \
 		({ if (0) printk(KERN_DEBUG "[LED]" fmt, ##__VA_ARGS__); })
 #define LED_INFO(fmt, ...) \
 		printk(KERN_INFO "[LED]" fmt, ##__VA_ARGS__)
 #define LED_ERR(fmt, ...) \
 		printk(KERN_ERR "[LED][ERR]" fmt, ##__VA_ARGS__)
-
+#else
+#define LED_DBG(fmt, ...)
+#define LED_INFO(fmt, ...)
+#define LED_ERR(fmt, ...)
+#endif
 static struct workqueue_struct *g_led_work_queue;
 struct wake_lock pmic_led_wake_lock;
 static struct pm8xxx_led_data *pm8xxx_leds	, *for_key_led_data, *green_back_led_data, *amber_back_led_data;
@@ -123,7 +131,7 @@ void pm8xxx_led_current_set_for_key(int brightness_key)
 	LED_INFO("%s brightness_key: %d\n", __func__,brightness_key);
 
 #ifdef CONFIG_BLN
-	printk("[BB] current_set_for_key  %d \n", brightness_key); 
+	LED_INFO("[BB] current_set_for_key  %d \n", brightness_key); 
 #endif
 	if (brightness_key) {
 		flag_hold_virtual_key = 1;
@@ -276,7 +284,7 @@ static void pm8xxx_led_current_set(struct led_classdev *led_cdev, enum led_brigh
 	// checking for buttons device
 	if (led_cdev_buttons == led_cdev)
 	{
-		printk("[BB] led_current_set %d \n", brightness);
+		LED_INFO("[BB] led_current_set %d \n", brightness);
 		if (brightness>0)
 		{
 			// screen turning off together with buttons led
@@ -296,16 +304,16 @@ static void pm8xxx_buttons_blink(int on)
 {
 	if (on > 0)
 	{
-		printk("[BB] blink on  screen: %d j: %lu \n", touchscreen_is_on(), jiffies);
+		LED_INFO("[BB] blink on  screen: %d j: %lu \n", touchscreen_is_on(), jiffies);
 		if (buttons_led_is_on == 1) return; // already lit, dont blink
 		if (touchscreen_is_on() == 1) return; // touchscreen is on, dont blink
-		printk("[BLN] touchscreen_is_on(1): %d",touchscreen_is_on());
+		LED_INFO("[BLN] touchscreen_is_on(1): %d",touchscreen_is_on());
 		buttons_led_is_blinking = 1;
 		// start blinking (brightness = 1, blink flag needed = 1)
 		pm8xxx_led_current_set_flagged(led_cdev_buttons, 1, 1);
 	} else
 	{
-		printk("[BB] blink off  screen: %d j: %lu \n", touchscreen_is_on(), jiffies);
+		LED_INFO("[BB] blink off  screen: %d j: %lu \n", touchscreen_is_on(), jiffies);
 		if (buttons_led_is_blinking == 0) return;
 		buttons_led_is_blinking = 0;
 		if (touchscreen_is_on() == 1 && buttons_turning_on_with_screen_on == 1) return; // touchscreen is on, button light already override the blinking, dont turn off
