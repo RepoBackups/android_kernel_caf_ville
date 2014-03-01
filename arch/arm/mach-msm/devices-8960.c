@@ -3641,9 +3641,9 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 		},
 	},
 #ifdef CONFIG_GPU_OVERCLOCK
-	.init_level = 3,
+	.init_level = 8,
 #else
-	.init_level = 1,
+	.init_level = 5,
 #endif
 	.num_levels = ARRAY_SIZE(grp3d_freq) + 1,
 	.set_grp_async = NULL,
@@ -3728,9 +3728,9 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 		},
 	},
 #ifdef CONFIG_GPU_OVERCLOCK
-	.init_level = 3,
+	.init_level = 5,
 #else
-	.init_level = 0,
+	.init_level = 2,
 #endif
 	.num_levels = ARRAY_SIZE(grp2d_freq) + 1,
 	.set_grp_async = NULL,
