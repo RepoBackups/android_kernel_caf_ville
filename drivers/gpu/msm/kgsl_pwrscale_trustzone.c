@@ -154,6 +154,8 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 static int laziness = 5;
 module_param_named(simple_laziness, laziness, int, 0664);
 
+static int local_laziness = 5;
+
 static int ramp_up_threshold = 6000;
 module_param_named(simple_ramp_threshold, ramp_up_threshold, int, 0664);
 
@@ -173,13 +175,13 @@ static int simple_governor(struct kgsl_device *device, int idle_stat)
 	} else {
 		if ((pwr->active_pwrlevel >= 0) &&
 			(pwr->active_pwrlevel < (pwr->num_pwrlevels - 1)))
-			if (laziness > 0) {
+			if (local_laziness > 0) {
 				/* hold off for a while */
-				laziness--;
+				local_laziness--;
 				val = 0; /* don't change anything yet */
 			} else {
 				val = 1; /* above min, lower it */
-				laziness = 5; /* reset laziness count */
+				local_laziness = laziness; /* reset laziness count */
 			}
 		else if (pwr->active_pwrlevel == (pwr->num_pwrlevels - 1))
 			val = 0; /* already @ min, so do nothing */
