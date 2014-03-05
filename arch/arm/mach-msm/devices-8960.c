@@ -124,6 +124,83 @@ struct flash_platform_data msm_nand_data = {
 };
 #endif
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+unsigned int cmdline_2dgpu[4] = {CMDLINE_2DGPU_DEFKHZ_0, CMDLINE_2DGPU_DEFKHZ_1, CMDLINE_2DGPU_DEFKHZ_2, CMDLINE_2DGPU_DEFKHZ_3 };
+unsigned int cmdline_3dgpu[4] = {CMDLINE_3DGPU_DEFKHZ_0, CMDLINE_3DGPU_DEFKHZ_1, CMDLINE_3DGPU_DEFKHZ_2, CMDLINE_3DGPU_DEFKHZ_3 };
+
+static int __init devices_read_2dgpu_cmdline(char *khz)
+{
+	unsigned long ui_khz;
+	int err;
+
+	err = strict_strtoul(khz, 0, &ui_khz);
+	if (err) {
+		cmdline_2dgpu[3] = CMDLINE_2DGPU_DEFKHZ_3;
+		cmdline_2dgpu[2] = CMDLINE_2DGPU_DEFKHZ_2;
+		cmdline_2dgpu[1] = CMDLINE_2DGPU_DEFKHZ_1;
+		cmdline_2dgpu[0] = CMDLINE_2DGPU_DEFKHZ_0;
+		return 1;
+	}
+
+	/* Check if parsed value is valid */
+	if (ui_khz > 320000000) {
+		cmdline_2dgpu[3] = CMDLINE_2DGPU_DEFKHZ_3;
+		cmdline_2dgpu[2] = CMDLINE_2DGPU_DEFKHZ_2;
+		cmdline_2dgpu[1] = CMDLINE_2DGPU_DEFKHZ_1;
+		cmdline_2dgpu[0] = CMDLINE_2DGPU_DEFKHZ_0;
+
+	} else if (ui_khz < 200000000) {
+		cmdline_2dgpu[3] = CMDLINE_2DGPU_DEFKHZ_3;
+		cmdline_2dgpu[2] = CMDLINE_2DGPU_DEFKHZ_2;
+		cmdline_2dgpu[1] = CMDLINE_2DGPU_DEFKHZ_1;
+		cmdline_2dgpu[0] = CMDLINE_2DGPU_DEFKHZ_0;
+	} else
+		cmdline_2dgpu[3] = ui_khz;
+		cmdline_2dgpu[2] = ui_khz;
+		cmdline_2dgpu[1] = ui_khz;
+		cmdline_2dgpu[0] = ui_khz;
+        return 1;
+}
+__setup("twodgpu=", devices_read_2dgpu_cmdline);
+
+static int __init devices_read_3dgpu_cmdline(char *khz)
+{
+	unsigned long ui_khz;
+	int err;
+
+	err = strict_strtoul(khz, 0, &ui_khz);
+	if (err) {
+		cmdline_3dgpu[3] = CMDLINE_3DGPU_DEFKHZ_3;
+		cmdline_3dgpu[2] = CMDLINE_3DGPU_DEFKHZ_2;
+		cmdline_3dgpu[1] = CMDLINE_3DGPU_DEFKHZ_1;
+		cmdline_3dgpu[0] = CMDLINE_3DGPU_DEFKHZ_0;
+		return 1;
+	}
+
+	/* Check if parsed value is valid */
+	if (ui_khz > 512000000) {
+		cmdline_3dgpu[3] = CMDLINE_3DGPU_DEFKHZ_3;
+		cmdline_3dgpu[2] = CMDLINE_3DGPU_DEFKHZ_2;
+		cmdline_3dgpu[1] = CMDLINE_3DGPU_DEFKHZ_1;
+		cmdline_3dgpu[0] = CMDLINE_3DGPU_DEFKHZ_0;
+	} else if (ui_khz < 400000000) {
+		cmdline_3dgpu[3] = CMDLINE_3DGPU_DEFKHZ_3;
+		cmdline_3dgpu[2] = CMDLINE_3DGPU_DEFKHZ_2;
+		cmdline_3dgpu[1] = CMDLINE_3DGPU_DEFKHZ_1;
+		cmdline_3dgpu[0] = CMDLINE_3DGPU_DEFKHZ_0;
+	} else {
+		cmdline_3dgpu[3] = ui_khz;
+		cmdline_3dgpu[2] = ui_khz;
+		cmdline_3dgpu[1] = ui_khz;
+		cmdline_3dgpu[0] = ui_khz;
+	}
+        return 1;
+}
+__setup("threedgpu=", devices_read_3dgpu_cmdline);
+
+#endif
+/* end cmdline_gpu */
+
 static struct resource msm8960_resources_pccntr[] = {
 	{
 		.start	= MSM8960_PC_CNTR_PHYS,
@@ -3843,6 +3920,34 @@ struct platform_device msm_kgsl_2d1 = {
 		.platform_data = &kgsl_2d1_pdata,
 	},
 };
+
+#ifdef CONFIG_CMDLINE_OPTIONS
+/* setters for cmdline_gpu */
+int set_kgsl_3d0_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3)
+{
+	kgsl_3d0_pdata.pwrlevel[0].gpu_freq = freq0;
+	kgsl_3d0_pdata.pwrlevel[1].gpu_freq = freq1;
+	kgsl_3d0_pdata.pwrlevel[2].gpu_freq = freq2;
+	kgsl_3d0_pdata.pwrlevel[3].gpu_freq = freq3;
+	return 0;
+}
+int set_kgsl_2d0_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3)
+{
+	kgsl_2d0_pdata.pwrlevel[0].gpu_freq = freq0;
+	kgsl_2d0_pdata.pwrlevel[1].gpu_freq = freq1;
+	kgsl_2d0_pdata.pwrlevel[2].gpu_freq = freq2;
+	kgsl_2d0_pdata.pwrlevel[3].gpu_freq = freq3;
+	return 0;
+}
+int set_kgsl_2d1_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3)
+{
+	kgsl_2d1_pdata.pwrlevel[0].gpu_freq = freq0;
+	kgsl_2d1_pdata.pwrlevel[1].gpu_freq = freq1;
+	kgsl_2d1_pdata.pwrlevel[2].gpu_freq = freq2;
+	kgsl_2d1_pdata.pwrlevel[3].gpu_freq = freq3;
+	return 0;
+}
+#endif
 
 #ifdef CONFIG_MSM_GEMINI
 

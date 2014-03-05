@@ -125,6 +125,13 @@
 #include <mach/perflock.h>
 #endif
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+	/* setters for cmdline_gpu */
+	int set_kgsl_3d0_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3);
+	int set_kgsl_2d0_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3);
+	int set_kgsl_2d1_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3);
+#endif
+
 extern unsigned int engineerid; // bit 0
 
 #define HW_VER_ID_VIRT		(MSM_TLMM_BASE + 0x00002054)
@@ -3619,6 +3626,12 @@ static void __init ville_init(void)
 #ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
         if(!cpu_is_krait_v1())
                 id_set_two_phase_freq(1134000);
+#endif
+#ifdef CONFIG_CMDLINE_OPTIONS
+	/* setters for cmdline_gpu */
+	set_kgsl_3d0_freq(cmdline_3dgpu[0], cmdline_3dgpu[1], cmdline_3dgpu[2], cmdline_3dgpu[3]);
+	set_kgsl_2d0_freq(cmdline_2dgpu[0], cmdline_2dgpu[1], cmdline_2dgpu[2], cmdline_2dgpu[3]);
+	set_kgsl_2d1_freq(cmdline_2dgpu[0], cmdline_2dgpu[1], cmdline_2dgpu[2], cmdline_2dgpu[3]);
 #endif
 	/*usb driver won't be loaded in MFG 58 station and gift mode*/
 	if (!(board_mfg_mode() == 6 || board_mfg_mode() == 7))
