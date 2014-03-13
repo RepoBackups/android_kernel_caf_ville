@@ -1001,7 +1001,6 @@ int msm_tsens_early_init(struct tsens_platform_data *pdata)
 		tmdev = NULL;
 		return rc;
 	}
-
 	rc = tsens_calib_sensors();
 	if (rc < 0) {
 		kfree(tmdev);
@@ -1046,6 +1045,7 @@ static int __devinit tsens_tm_probe(struct platform_device *pdev)
 		}
 		tmdev->sensor[i].mode = THERMAL_DEVICE_DISABLED;
 	}
+	tsens8960_sensor_mode_init();
 
 	tsens8960_sensor_mode_init();
 

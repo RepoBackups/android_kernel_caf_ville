@@ -723,3 +723,4 @@ int __init msm_thermal_device_init(void)
 }
 
 fs_initcall(msm_thermal_device_init);
+
