@@ -470,3 +470,4 @@ int32_t msm_actuator_create_subdevice(struct msm_actuator_ctrl_t *a_ctrl,
 
 	return rc;
 }
+
