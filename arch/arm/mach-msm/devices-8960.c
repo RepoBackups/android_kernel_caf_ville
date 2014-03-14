@@ -131,6 +131,8 @@ unsigned int cmdline_3dgpu[4] = {CMDLINE_3DGPU_DEFKHZ_0, CMDLINE_3DGPU_DEFKHZ_1,
 static int __init devices_read_2dgpu_cmdline(char *khz)
 {
 	unsigned long ui_khz;
+	unsigned long *f;
+ 	unsigned long valid_freq[4] = {200000000, 266667000, 300000000, 320000000};
 	int err;
 
 	err = strict_strtoul(khz, 0, &ui_khz);
@@ -154,11 +156,30 @@ static int __init devices_read_2dgpu_cmdline(char *khz)
 		cmdline_2dgpu[2] = CMDLINE_2DGPU_DEFKHZ_2;
 		cmdline_2dgpu[1] = CMDLINE_2DGPU_DEFKHZ_1;
 		cmdline_2dgpu[0] = CMDLINE_2DGPU_DEFKHZ_0;
-	} else
-		cmdline_2dgpu[3] = ui_khz;
-		cmdline_2dgpu[2] = ui_khz;
-		cmdline_2dgpu[1] = ui_khz;
-		cmdline_2dgpu[0] = ui_khz;
+	} else {
+		for (f = valid_freq; f != 0; f++) {
+			if (*f == ui_khz) {
+				cmdline_2dgpu[3] = ui_khz;
+				cmdline_2dgpu[2] = ui_khz;
+				cmdline_2dgpu[1] = ui_khz;
+				cmdline_2dgpu[0] = ui_khz;
+				return 1;
+			}
+			if (ui_khz > *f) {
+				f++;
+				if (ui_khz < *f) {
+					f--;
+					cmdline_2dgpu[3] = *f;
+					cmdline_2dgpu[2] = *f;
+					cmdline_2dgpu[1] = *f;
+					cmdline_2dgpu[0] = *f;
+					printk(KERN_INFO "[cmdline_2dgpu]: AUTOCORRECT! Couldn't find entered value");
+					return 1;
+				}
+				f--;
+			}
+		}
+	}
         return 1;
 }
 __setup("twodgpu=", devices_read_2dgpu_cmdline);
@@ -166,6 +187,8 @@ __setup("twodgpu=", devices_read_2dgpu_cmdline);
 static int __init devices_read_3dgpu_cmdline(char *khz)
 {
 	unsigned long ui_khz;
+	unsigned long *f;
+	unsigned long valid_freq[4] = {400000000, 436364000, 480000000, 512000000};
 	int err;
 
 	err = strict_strtoul(khz, 0, &ui_khz);
@@ -189,10 +212,28 @@ static int __init devices_read_3dgpu_cmdline(char *khz)
 		cmdline_3dgpu[1] = CMDLINE_3DGPU_DEFKHZ_1;
 		cmdline_3dgpu[0] = CMDLINE_3DGPU_DEFKHZ_0;
 	} else {
-		cmdline_3dgpu[3] = ui_khz;
-		cmdline_3dgpu[2] = ui_khz;
-		cmdline_3dgpu[1] = ui_khz;
-		cmdline_3dgpu[0] = ui_khz;
+		for (f = valid_freq; f != 0; f++) {
+			if (*f == ui_khz) {
+				cmdline_3dgpu[3] = ui_khz;
+				cmdline_3dgpu[2] = ui_khz;
+				cmdline_3dgpu[1] = ui_khz;
+				cmdline_3dgpu[0] = ui_khz;
+				return 1;
+			}
+			if (ui_khz > *f) {
+				f++;
+				if (ui_khz < *f) {
+					f--;
+					cmdline_3dgpu[3] = *f;
+					cmdline_3dgpu[2] = *f;
+					cmdline_3dgpu[1] = *f;
+					cmdline_3dgpu[0] = *f;
+					printk(KERN_INFO "[cmdline_3dgpu]: AUTOCORRECT! Couldn't find entered value");
+					return 1;
+				}
+				f--;
+			}
+		}			
 	}
         return 1;
 }
