@@ -31,6 +31,7 @@
 #include <asm/uaccess.h>
 #include <asm/mach-types.h>
 #include <linux/cm3629.h>
+#include <linux/pl_sensor.h>
 #include <linux/capella_cm3602.h>
 #include <asm/setup.h>
 #include <linux/wakelock.h>
