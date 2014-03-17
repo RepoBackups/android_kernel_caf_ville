@@ -1018,8 +1018,10 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	struct cpufreq_policy *policy;
 	unsigned long flags;
 	unsigned int j;
+
 #ifdef CONFIG_HOTPLUG_CPU
 	int sibling;
+	struct cpufreq_policy *cp;
 #endif
 
 	if (cpu_is_offline(cpu))
@@ -1088,7 +1090,17 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 	}
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
-
+//***ADD THIS HERE TO FORCE SECONDARY CPU'S TO INITIALIZE AT SAME POLICY AS BOOT CPU0**	
+	if (policy->cpu >=1) {
+	// dealing with secondary cpu, force policy of cpu0 on this cpu as well for init
+	cp = per_cpu(cpufreq_cpu_data, 0);
+	policy->governor = cp->governor;
+	policy->min = cp->min;
+	policy->max = cp->max;
+	policy->user_policy.min = cp->user_policy.min;
+	policy->user_policy.max = cp->user_policy.max;
+	}
+//***END**
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
 

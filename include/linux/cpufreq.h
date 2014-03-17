@@ -29,8 +29,6 @@ extern uint32_t cmdline_maxkhz;
 extern char cmdline_gov[16];
 extern int cmdline_gov_cnt;
 
-/* check_khz function for cmdline khz parameters */
-extern uint32_t acpu_check_khz_value(unsigned long khz);
 #endif
 
 /*********************************************************************
