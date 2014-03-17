@@ -21,11 +21,31 @@
  *   1 - substitute AC to USB unconditional
 */
 
+#include <linux/module.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/fastchg.h>
 
 int force_fast_charge;
+
+#ifdef CONFIG_CMDLINE_OPTIONS
+int fst_switch;
+static int __init fastchg_read_fstcfg_cmdline(char *fstcfg)
+{
+	if (strcmp(fstcfg, "1") == 0) {
+		printk(KERN_INFO "[cmdline_fstcfg]: Fastcharge enabled. | fstcfg='%s'", fstcfg);
+		fst_switch = 1;
+	} else if (strcmp(fstcfg, "0") == 0) {
+		printk(KERN_INFO "[cmdline_fstcfg]: Fastcharge disabled. | fstcfg='%s'", fstcfg);
+		fst_switch = 0;
+	} else {
+		printk(KERN_INFO "[cmdline_fstcfg]: No valid input found. Fastcharge disabled. | fstcfg='%s'", fstcfg);
+		fst_switch = 0;
+	}
+	return 1;
+}
+__setup("fstcfg=", fastchg_read_fstcfg_cmdline);
+#endif
 
 /* sysfs interface for "force_fast_charge" */
 static ssize_t force_fast_charge_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
@@ -66,9 +86,16 @@ static struct kobject *force_fast_charge_kobj;
 int force_fast_charge_init(void)
 {
 	int force_fast_charge_retval;
-
+	
+#ifdef CONFIG_CMDLINE_OPTIONS
+	if (fst_switch == 1) {
+		force_fast_charge = FAST_CHARGE_FORCE_AC;
+	} else {
+		force_fast_charge = FAST_CHARGE_DISABLED;
+	}
+#else	
 	force_fast_charge = FAST_CHARGE_FORCE_AC; /* Forced fast charge enabled by default */
-
+#endif
 	force_fast_charge_kobj = kobject_create_and_add("fast_charge", kernel_kobj);
 	if (!force_fast_charge_kobj) {
 			return -ENOMEM;
