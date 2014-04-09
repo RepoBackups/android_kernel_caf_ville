@@ -25,15 +25,15 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
 #endif
 
 //#define DEBUG_SLEEPY_PLUG
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	1
-#define SLEEPY_PLUG_MINOR_VERSION	2
+#define SLEEPY_PLUG_MINOR_VERSION	5
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
@@ -137,10 +137,10 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 		msecs_to_jiffies(sampling_time));
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static void sleepy_plug_suspend(struct power_suspend *handler)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void sleepy_plug_suspend(struct early_suspend *h)
 {
-	flush_workqueue(&sleepy_plug_work);
+	flush_workqueue(sleepy_plug_wq);
 
 	mutex_lock(&sleepy_plug_mutex);
 	suspended = true;
@@ -149,15 +149,12 @@ static void sleepy_plug_suspend(struct power_suspend *handler)
 	cpu_down(1);
 }
 
-static void __cpuinit sleepy_plug_resume(struct power_suspend *handler)
+static void __cpuinit sleepy_plug_resume(struct early_suspend *h)
 {
 	mutex_lock(&sleepy_plug_mutex);
 	/* keep cores awake long enough for faster wake up */
 	suspended = false;
 	mutex_unlock(&sleepy_plug_mutex);
-
-	/* wake up everyone */
-	num_of_active_cores = 2;
 
 	cpu_up(1);
 
@@ -165,11 +162,11 @@ static void __cpuinit sleepy_plug_resume(struct power_suspend *handler)
 		msecs_to_jiffies(10));
 }
 
-static struct power_suspend sleepy_plug_power_suspend_driver = {
+static struct early_suspend sleepy_plug_early_suspend_driver = {
 	.suspend = sleepy_plug_suspend,
 	.resume = sleepy_plug_resume,
 };
-#endif  /* CONFIG_POWERSUSPEND */
+#endif  /* CONFIG_HAS_EARLYSUSPEND */
 
 static void sleepy_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -210,7 +207,7 @@ static int sleepy_plug_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "intelliplug";
+	handle->name = "sleepyplug";
 
 	error = input_register_handle(handle);
 	if (error)
@@ -261,8 +258,8 @@ int __init sleepy_plug_init(void)
 	sleepy_plug_wq = alloc_workqueue("sleepyplug",
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
 
-#ifdef CONFIG_POWERSUSPEND
-	register_power_suspend(&sleepy_plug_power_suspend_driver);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	register_early_suspend(&sleepy_plug_early_suspend_driver);
 #endif
 
 	INIT_DELAYED_WORK(&sleepy_plug_work, sleepy_plug_work_fn);
