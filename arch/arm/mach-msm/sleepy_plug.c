@@ -25,8 +25,8 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 //#define DEBUG_SLEEPY_PLUG
@@ -137,8 +137,8 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 		msecs_to_jiffies(sampling_time));
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void sleepy_plug_suspend(struct early_suspend *h)
+#ifdef CONFIG_POWERSUSPEND
+static void sleepy_plug_suspend(struct power_suspend *h)
 {
 	flush_workqueue(sleepy_plug_wq);
 
@@ -149,7 +149,7 @@ static void sleepy_plug_suspend(struct early_suspend *h)
 	cpu_down(1);
 }
 
-static void __cpuinit sleepy_plug_resume(struct early_suspend *h)
+static void __cpuinit sleepy_plug_resume(struct power_suspend *h)
 {
 	mutex_lock(&sleepy_plug_mutex);
 	/* keep cores awake long enough for faster wake up */
@@ -162,11 +162,11 @@ static void __cpuinit sleepy_plug_resume(struct early_suspend *h)
 		msecs_to_jiffies(10));
 }
 
-static struct early_suspend sleepy_plug_early_suspend_driver = {
+static struct power_suspend sleepy_plug_power_suspend_driver = {
 	.suspend = sleepy_plug_suspend,
 	.resume = sleepy_plug_resume,
 };
-#endif  /* CONFIG_HAS_EARLYSUSPEND */
+#endif  /* CONFIG_POWERSUSPEND */
 
 static void sleepy_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
@@ -258,8 +258,8 @@ int __init sleepy_plug_init(void)
 	sleepy_plug_wq = alloc_workqueue("sleepyplug",
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&sleepy_plug_early_suspend_driver);
+#ifdef CONFIG_POWERSUSPEND
+	register_power_suspend(&sleepy_plug_power_suspend_driver);
 #endif
 
 	INIT_DELAYED_WORK(&sleepy_plug_work, sleepy_plug_work_fn);
