@@ -42,7 +42,7 @@ static DECLARE_WORK(power_resume_work, power_resume);
 static DEFINE_SPINLOCK(state_lock);
 
 static int state; // Yank555.lu : Current powersave state (screen on / off)
-static int mode;  // Yank555.lu : Current powersave more  (kernel / userspace)
+static int mode = POWER_SUSPEND_KERNEL;  // Yank555.lu : Current powersave more  (kernel / userspace)
 
 void register_power_suspend(struct power_suspend *handler)
 {
@@ -275,7 +275,7 @@ static int __init power_suspend_init(void)
 		return -ENOMEM;
 	}
 
-	mode = POWER_SUSPEND_USERSPACE;
+	mode = POWER_SUSPEND_KERNEL;
 
 	return 0;
 }
