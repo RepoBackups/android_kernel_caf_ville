@@ -129,7 +129,10 @@ static int critical_alarm_level_set;
 struct wake_lock voltage_alarm_wake_lock;
 struct wake_lock batt_shutdown_wake_lock;
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static struct early_suspend early_suspend;
+#endif
+
 static int screen_state;
 static int pre_screen_state;
 #ifdef CONFIG_HTC_BATT_ALARM

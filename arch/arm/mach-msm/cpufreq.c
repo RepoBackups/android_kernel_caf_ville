@@ -398,6 +398,7 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 extern bool lmf_screen_state;
 #endif
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static void msm_cpu_early_suspend(struct early_suspend *h)
 {
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
@@ -424,12 +425,15 @@ static void msm_cpu_late_resume(struct early_suspend *h)
 		}
 #endif
 }
+#endif
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static struct early_suspend msm_cpu_early_suspend_handler = {
 	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
 	.suspend = msm_cpu_early_suspend,
 	.resume = msm_cpu_late_resume,
 };
+#endif
 
 static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)

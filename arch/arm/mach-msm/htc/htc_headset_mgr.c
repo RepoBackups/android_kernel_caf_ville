@@ -1965,6 +1965,7 @@ static void headset_mgr_init(void)
 		gpio_set_value(hi->pdata.hptv_sel_gpio, 0);
 }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static void htc_headset_mgr_early_suspend(struct early_suspend *h)
 {
 	HS_DBG();
@@ -1991,6 +1992,7 @@ static void htc_headset_mgr_late_resume(struct early_suspend *h)
 	HS_DBG();
 #endif
 }
+#endif
 
 static int htc_headset_mgr_suspend(struct platform_device *pdev,
 				   pm_message_t mesg)
@@ -2045,9 +2047,11 @@ static int htc_headset_mgr_probe(struct platform_device *pdev)
 
 	hi->driver_init_seq = 0;
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	hi->early_suspend.suspend = htc_headset_mgr_early_suspend;
 	hi->early_suspend.resume = htc_headset_mgr_late_resume;
 	register_early_suspend(&hi->early_suspend);
+#endif
 
 	wake_lock_init(&hi->hs_wake_lock, WAKE_LOCK_SUSPEND, DRIVER_NAME);
 

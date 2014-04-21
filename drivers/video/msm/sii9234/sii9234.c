@@ -12,7 +12,9 @@
  * GNU General Public License for more details.
  *
  */
+#ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
+#endif
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -728,9 +730,10 @@ static int sii9234_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&pInfo->init_delay_work, init_delay_handler);
 	INIT_DELAYED_WORK(&pInfo->init_complete_work, init_complete_handler);
 	INIT_DELAYED_WORK(&pInfo->irq_timeout_work, irq_timeout_handler);
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	INIT_DELAYED_WORK(&pInfo->mhl_on_delay_work, mhl_on_delay_handler);
 	INIT_DELAYED_WORK(&pInfo->turn_off_5v, mhl_turn_off_5v);
-
+#endif
 #ifdef CONFIG_INTERNAL_CHARGING_SUPPORT
 	INIT_DELAYED_WORK(&pInfo->detect_charger_work, detect_charger_handler);
 #endif
@@ -828,7 +831,7 @@ static int sii9234_remove(struct i2c_client *client)
 	if(1)
 		debugfs_remove(dbg_entry_dir);
 
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&pInfo->early_suspend);
 #endif
 	destroy_workqueue(pInfo->wq);
@@ -845,7 +848,7 @@ static struct i2c_driver sii9234_driver = {
 	.id_table = sii9234_i2c_id,
 	.probe = sii9234_probe,
 	.remove = sii9234_remove,
-#ifndef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	.suspend = sii9234_suspend,
 	.resume = sii9234_resume,
 #endif

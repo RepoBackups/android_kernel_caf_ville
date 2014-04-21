@@ -480,6 +480,7 @@ static void fl_lcdev_brightness_set(struct led_classdev *led_cdev,
 	}
 }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static void flashlight_early_suspend(struct early_suspend *handler)
 {
 	FLT_INFO_LOG("%s\n", __func__);
@@ -490,6 +491,7 @@ static void flashlight_early_suspend(struct early_suspend *handler)
 static void flashlight_late_resume(struct early_suspend *handler)
 {
 }
+#endif
 
 static void flashlight_turn_off_work(struct work_struct *work)
 {

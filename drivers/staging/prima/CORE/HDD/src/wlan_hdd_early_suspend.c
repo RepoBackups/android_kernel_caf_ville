@@ -765,6 +765,7 @@ void hdd_conf_mcastbcast_filter(hdd_context_t* pHddCtx, v_BOOL_t setfilter)
 }
 
 #ifdef FEATURE_WLAN_INTEGRATED_SOC
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static void hdd_conf_suspend_ind(hdd_context_t* pHddCtx,
                                  hdd_adapter_t *pAdapter)
 {
@@ -887,6 +888,7 @@ static void hdd_conf_resume_ind(hdd_context_t* pHddCtx)
     }
 #endif
 }
+#endif
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1980,11 +1982,11 @@ VOS_STATUS hdd_wlan_shutdown(void)
 
    /* shutdown VOSS */
    vos_shutdown(pVosContext);
-   if (free_riva_power_on_lock("wlan"))
+/*   if (free_riva_power_on_lock("wlan"))
    {
       hddLog(VOS_TRACE_LEVEL_ERROR, "%s: failed to free power on lock",
                                            __func__);
-   }
+   }*/
    hddLog(VOS_TRACE_LEVEL_FATAL, "%s: WLAN driver shutdown complete"
                                    ,__func__);
    return VOS_STATUS_SUCCESS;
@@ -2136,12 +2138,15 @@ VOS_STATUS hdd_wlan_re_init(void)
       goto err_bap_stop;
    }
    // Register suspend/resume callbacks
+#ifdef CONFIG_HAS_EARLYSUSPEND
    if(pHddCtx->cfg_ini->nEnableSuspend)
    {
       register_wlan_suspend();
    }
+
    /* Allow the phone to go to sleep */
    hdd_allow_suspend();
+
    /* register for riva power on lock */
    if (req_riva_power_on_lock("wlan"))
    {
@@ -2149,9 +2154,11 @@ VOS_STATUS hdd_wlan_re_init(void)
                                         __func__);
       goto err_unregister_pmops;
    }
+#endif
    goto success;
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
 err_unregister_pmops:
+#endif
    hddDeregisterPmOps(pHddCtx);
 
 err_bap_stop:
