@@ -33,7 +33,7 @@
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	1
-#define SLEEPY_PLUG_MINOR_VERSION	5
+#define SLEEPY_PLUG_MINOR_VERSION	6
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
@@ -42,7 +42,7 @@
 #define UP_THRESHOLD			11
 #define PEAK_THRESHOLD			30
 
-#define RQ_VALUE_ARRAY_DIM		5
+#define RQ_VALUES_ARRAY_DIM		5
 
 static DEFINE_MUTEX(sleepy_plug_mutex);
 
@@ -59,23 +59,23 @@ enum mp_decisions {
 static unsigned int sleepy_plug_active = 1;
 module_param(sleepy_plug_active, uint, 0644);
 
-static unsigned int sampling_time = 0;
+static unsigned int sampling_time = DEF_SAMPLING_MS;
 static bool suspended = false;
-static unsigned int rq_values[RQ_VALUE_ARRAY_DIM] = {6};
+static unsigned int rq_values[RQ_VALUES_ARRAY_DIM] = {6};
 
 static int calc_rq_avg(int last_rq_depth) {
 	int i;
 	int avg = 0;
 
 	//shift all values by 1
-	for(i = 0;i < RQ_VALUE_ARRAY_DIM-1;i++) {
+	for(i = 0;i < RQ_VALUES_ARRAY_DIM-1;i++) {
 		rq_values[i] = rq_values[i+1];
 		avg += rq_values[i+1];
 	}
 	avg += last_rq_depth;
-	rq_values[RQ_VALUE_ARRAY_DIM-1] = last_rq_depth;
+	rq_values[RQ_VALUES_ARRAY_DIM-1] = last_rq_depth;
 
-	return avg/RQ_VALUE_ARRAY_DIM;
+	return avg/RQ_VALUES_ARRAY_DIM;
 }
 
 static enum mp_decisions mp_decision(void)
@@ -85,9 +85,9 @@ static enum mp_decisions mp_decision(void)
 	enum mp_decisions decision = DO_NOTHING;
 
 	if(rq_info.rq_avg > PEAK_THRESHOLD) {
-		for(i = 0;i < RQ_VALUE_ARRAY_DIM-1;i++) 
+		for(i = 0;i < RQ_VALUES_ARRAY_DIM-1;i++) 
 			rq_values[i] = rq_values[i+1];
-		rq_values[RQ_VALUE_ARRAY_DIM-1] = rq_info.rq_avg;
+		rq_values[RQ_VALUES_ARRAY_DIM-1] = rq_info.rq_avg;
 
 		avg = rq_info.rq_avg;
 	}
@@ -114,11 +114,11 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 		// detect artificial loads or constant loads
 		// using msm rqstats
 
-		decision = mp_decision();
 #ifdef DEBUG_SLEEPY_PLUG
 		pr_info("decision: %d\n",decision);
 #endif
 		if (!suspended) {
+			decision = mp_decision();
 			if (decision == CPU_UP) {
 				cpu_up(1);
 				sampling_time = BUSY_SAMPLING_MS;
@@ -175,31 +175,11 @@ static void sleepy_plug_input_event(struct input_handle *handle,
                 msecs_to_jiffies(10));
 }
 
-static int input_dev_filter(const char *input_dev_name)
-{
-	if (strstr(input_dev_name, "touchscreen") ||
-		strstr(input_dev_name, "sec_touchscreen") ||
-		strstr(input_dev_name, "touch_dev") ||
-		strstr(input_dev_name, "atmel_mxt224e") ||
-		strstr(input_dev_name, "-keypad") ||
-		strstr(input_dev_name, "-nav") ||
-		strstr(input_dev_name, "-oj")) {
-		pr_info("touch dev: %s\n", input_dev_name);
-		return 0;
-	} else {
-		pr_info("touch dev: %s\n", input_dev_name);
-		return 1;
-	}
-}
-
 static int sleepy_plug_input_connect(struct input_handler *handler,
 		struct input_dev *dev, const struct input_device_id *id)
 {
 	struct input_handle *handle;
 	int error;
-
-	if (input_dev_filter(dev->name))
-		return -ENODEV;
 
 	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
 	if (!handle)
@@ -233,7 +213,21 @@ static void sleepy_plug_input_disconnect(struct input_handle *handle)
 }
 
 static const struct input_device_id sleepy_plug_ids[] = {
-	{ .driver_info = 1 },
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_EVBIT |
+			 INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.evbit = { BIT_MASK(EV_ABS) },
+		.absbit = { [BIT_WORD(ABS_MT_POSITION_X)] =
+			    BIT_MASK(ABS_MT_POSITION_X) |
+			    BIT_MASK(ABS_MT_POSITION_Y) },
+	}, /* multi-touch touchscreen */
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT |
+			 INPUT_DEVICE_ID_MATCH_ABSBIT,
+		.keybit = { [BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH) },
+		.absbit = { [BIT_WORD(ABS_X)] =
+			    BIT_MASK(ABS_X) | BIT_MASK(ABS_Y) },
+	}, /* touchpad */
 	{ },
 };
 
@@ -275,4 +269,5 @@ MODULE_DESCRIPTION("'sleepy_plug' - An intelligent cpu hotplug driver for "
 MODULE_LICENSE("GPL");
 
 late_initcall(sleepy_plug_init);
+
 
