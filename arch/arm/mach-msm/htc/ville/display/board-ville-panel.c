@@ -67,7 +67,17 @@ static struct resource msm_fb_resources[] = {
 	}
 };
 
+#ifdef CONFIG_UPDATE_LCDC_LUT
+int update_preset_lcdc_lut(void)
+{
+	return 0;
+}
+#endif
+
 static struct msm_fb_platform_data msm_fb_pdata = {
+#ifdef CONFIG_UPDATE_LCDC_LUT
+	.update_lcdc_lut = update_preset_lcdc_lut,
+#endif
 };
 
 static struct platform_device msm_fb_device = {

@@ -2423,7 +2423,7 @@ static int mdp_on(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd;
-	int i;
+	//int i;
 	mfd = platform_get_drvdata(pdev);
 
 	pr_debug("%s:+\n", __func__);
@@ -2453,10 +2453,10 @@ static int mdp_on(struct platform_device *pdev)
 		mdp4_hw_init();
 
 		/* Initialize HistLUT to last LUT */
-		for (i = 0; i < MDP_HIST_LUT_SIZE; i++) {
+		/*for (i = 0; i < MDP_HIST_LUT_SIZE; i++) {
 			MDP_OUTP(MDP_BASE + 0x94800 + i*4, last_lut[i]);
 			MDP_OUTP(MDP_BASE + 0x94C00 + i*4, last_lut[i]);
-		}
+		}*/
 
 		mdp_lut_status_restore();
 		outpdw(MDP_BASE + 0x0038, mdp4_display_intf);
