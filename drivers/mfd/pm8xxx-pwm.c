@@ -1374,7 +1374,7 @@ user_error:
 	return rc;
 }
 
-static int __devexit pm8xxx_pwm_dbg_remove(void)
+static int pm8xxx_pwm_dbg_remove(void)
 {
 	if (pmic_dbg_device) {
 		kfree(pmic_dbg_device->user);
@@ -1391,7 +1391,7 @@ static int __devinit pm8xxx_pwm_dbg_probe(struct device *dev)
 	return 0;
 }
 
-static int __devexit pm8xxx_pwm_dbg_remove(void)
+static int pm8xxx_pwm_dbg_remove(void)
 {
 	return 0;
 }
@@ -1469,7 +1469,7 @@ static int __devinit pm8xxx_pwm_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit pm8xxx_pwm_remove(struct platform_device *pdev)
+static int pm8xxx_pwm_remove(struct platform_device *pdev)
 {
 	struct pm8xxx_pwm_chip	*chip = dev_get_drvdata(pdev->dev.parent);
 
@@ -1483,7 +1483,7 @@ static int __devexit pm8xxx_pwm_remove(struct platform_device *pdev)
 
 static struct platform_driver pm8xxx_pwm_driver = {
 	.probe		= pm8xxx_pwm_probe,
-	.remove		= __devexit_p(pm8xxx_pwm_remove),
+	.remove		= pm8xxx_pwm_remove,
 	.driver		= {
 		.name = PM8XXX_PWM_DEV_NAME,
 		.owner = THIS_MODULE,
