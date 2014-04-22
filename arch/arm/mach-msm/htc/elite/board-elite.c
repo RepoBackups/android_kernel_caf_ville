@@ -2638,7 +2638,7 @@ static void elite_usb_dpdn_switch(int path)
 		break;
 	}
 	}
-#ifdef CONFIG_FB_MSM_HDMI_MHL_SII9234
+#if defined(CONFIG_FB_MSM_HDMI_MHL_SII9234) && defined(CONFIG_HAS_EARLYSUSPEND)
 	sii9234_change_usb_owner((path == PATH_MHL) ? 1 : 0);
 #endif
 }

@@ -1033,3 +1033,8 @@ config TOUCHSCREEN_CYPRESS_SWEEP2WAKE
         depends on TOUCHSCREEN_CYPRESS_CS
         default n
 
+config TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
+	depends on TOUCHSCREEN_SYNAPTICS_3K
+        tristate "Sweep2Wake for SYNAPTICS_3k based touchscreens"
+        default n
+
