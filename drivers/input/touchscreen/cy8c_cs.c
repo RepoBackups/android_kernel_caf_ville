@@ -15,9 +15,6 @@
 
 #include <linux/input/cy8c_cs.h>
 #include <linux/delay.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
 #ifdef CONFIG_POWERSUSPEND
 #include <linux/powersuspend.h>
 #endif
@@ -73,13 +70,10 @@ static int disable_key;
 static int reset_cnt; 
 
 extern int board_build_flag(void);
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-static void cy8c_cs_early_suspend(struct early_suspend *h);
-static void cy8c_cs_late_resume(struct early_suspend *h);
-#endif
+
 #if defined(CONFIG_POWERSUSPEND)
-static void cy8c_cs_early_suspend(struct power_suspend *h);
-static void cy8c_cs_late_resume(struct power_suspend *h);
+static void cy8c_cs_power_suspend(struct power_suspend *h);
+static void cy8c_cs_power_resume(struct power_suspend *h);
 #endif
 
 #if defined(CONFIG_BLN) || defined (CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
@@ -1051,17 +1045,10 @@ static int cy8c_cs_probe(struct i2c_client *client,
 		}
 		INIT_DELAYED_WORK(&cs->work_raw, cy8c_rawdata_print);
 	}
-#if defined(CONFIG_HAS_EARLYSUSPEND) || defined(CONFIG_POWERSUSPEND)
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	cs->early_suspend.level   = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
-#endif
-	cs->early_suspend.suspend = cy8c_cs_early_suspend;
-	cs->early_suspend.resume  = cy8c_cs_late_resume;
 #if defined(CONFIG_POWERSUSPEND)
+	cs->early_suspend.suspend = cy8c_cs_power_suspend;
+	cs->early_suspend.resume  = cy8c_cs_power_resume;
 	register_power_suspend(&cs->early_suspend);
-#else
-	register_early_suspend(&cs->early_suspend);
-#endif
 #endif
 	cy8c_touchkey_sysfs_init();
 
@@ -1114,8 +1101,6 @@ static int cy8c_cs_remove(struct i2c_client *client)
 	cy8c_touchkey_sysfs_deinit();
 #ifdef CONFIG_POWERSUSPEND
 	unregister_power_suspend(&cs->early_suspend);
-#else
-	unregister_early_suspend(&cs->early_suspend);
 #endif
 	free_irq(client->irq, cs);
 	input_unregister_device(cs->input_dev);
@@ -1192,29 +1177,13 @@ static int cy8c_cs_resume(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void cy8c_cs_early_suspend(struct early_suspend *h)
-{
-	struct cy8c_cs_data *ts;
-	ts = container_of(h, struct cy8c_cs_data, early_suspend);
-	cy8c_cs_suspend(ts->client, PMSG_SUSPEND);
-}
-
-static void cy8c_cs_late_resume(struct early_suspend *h)
-{
-	struct cy8c_cs_data *ts;
-	ts = container_of(h, struct cy8c_cs_data, early_suspend);
-	cy8c_cs_resume(ts->client);
-}
-#endif
-
 #ifdef CONFIG_POWERSUSPEND
-static void cy8c_cs_early_suspend(struct power_suspend *h)
+static void cy8c_cs_power_suspend(struct power_suspend *h)
 {
 	scr_suspended = true;
 }
 
-static void cy8c_cs_late_resume(struct power_suspend *h)
+static void cy8c_cs_power_resume(struct power_suspend *h)
 {
 	scr_suspended = false;
 }
