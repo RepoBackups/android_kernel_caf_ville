@@ -2324,7 +2324,7 @@ static struct cm3629_platform_data cm36282_pdata = {
 	.ps_conf2_val = CM3629_PS_ITB_1 | CM3629_PS_ITR_1 |
 		CM3629_PS2_INT_DIS | CM3629_PS1_INT_DIS,
 	.ps_conf3_val = CM3629_PS2_PROL_32,
-	.enable_polling_ignore = 1,
+	.dynamical_threshold = 1,
 	.mapping_table = cm3629_mapping_table,
 	.mapping_size = ARRAY_SIZE(cm3629_mapping_table),
 };
@@ -2907,6 +2907,7 @@ out:
 
 static struct android_usb_platform_data android_usb_pdata = {
 	.update_pid_and_serial_num = usb_diag_update_pid_and_serial_num,
+	.nluns = 2,
 };
 
 static struct platform_device android_usb_device = {
@@ -4173,3 +4174,4 @@ MACHINE_START(JET, "jet")
 	.init_very_early = jet_early_memory,
 	.restart = msm_restart,
 MACHINE_END
+
