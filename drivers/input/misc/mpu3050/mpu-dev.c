@@ -845,8 +845,6 @@ void mpu3050_power_suspend(struct power_suspend *h)
 	pressure_adapter =
 	    i2c_get_adapter(mldl_cfg->pdata->pressure.adapt_num);
 
-	dev_dbg(&this_client->adapter->dev, "%s: %d, %d\n", __func__,
-		h->level, mpu->mldl_cfg.gyro_is_suspended);
 	if (MPU3050_EARLY_SUSPEND_IN_DRIVER)
 		(void) mpu3050_suspend(mldl_cfg, this_client->adapter,
 				accel_adapter, compass_adapter,
@@ -886,7 +884,6 @@ void mpu3050_early_resume(struct power_suspend *h)
 				"%s for pid %d\n", __func__, pid);
 		}
 	}
-	dev_dbg(&this_client->adapter->dev, "%s: %d\n", __func__, h->level);
 }
 #endif
 
@@ -1303,7 +1300,6 @@ int mpu3050_probe(struct i2c_client *client,
 
 
 #ifdef CONFIG_POWERSUSPEND
-	mpu->power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	mpu->power_suspend.suspend = mpu3050_power_suspend;
 	mpu->power_suspend.resume = mpu3050_early_resume;
 	register_power_suspend(&mpu->power_suspend);
