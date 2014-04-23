@@ -12,8 +12,8 @@
  * GNU General Public License for more details.
  *
  */
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <linux/i2c.h>
 #include <linux/module.h>
@@ -71,8 +71,8 @@ typedef struct {
 #ifdef CONFIG_INTERNAL_CHARGING_SUPPORT
 	struct delayed_work detect_charger_work;
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 	int reset_pin;
 	int intr_pin;
@@ -88,7 +88,7 @@ static T_MHL_SII9234_INFO *sii9234_info_ptr;
 static void sii9234_irq_do_work(struct work_struct *work);
 static DECLARE_WORK(sii9234_irq_work, sii9234_irq_do_work);
 
-static DEFINE_MUTEX(mhl_early_suspend_sem);
+static DEFINE_MUTEX(mhl_power_suspend_sem);
 unsigned long suspend_jiffies;
 unsigned long irq_jiffies;
 bool g_bEnterEarlySuspend = false;
@@ -122,12 +122,12 @@ static void detect_charger_handler(struct work_struct *w)
 	T_MHL_SII9234_INFO *pInfo = container_of(
 			w, T_MHL_SII9234_INFO, detect_charger_work.work);
 
-	mutex_lock(&mhl_early_suspend_sem);
+	mutex_lock(&mhl_power_suspend_sem);
 
 	PR_DISP_DEBUG("%s: query status every 2 second\n", __func__);
 	SiiMhlTxReadDevcap(0x02);
 
-	mutex_unlock(&mhl_early_suspend_sem);
+	mutex_unlock(&mhl_power_suspend_sem);
 
 	queue_delayed_work(pInfo->wq, &pInfo->detect_charger_work, HZ*2);
 }
@@ -315,7 +315,7 @@ static void sii9234_irq_do_work(struct work_struct *work)
 	T_MHL_SII9234_INFO *pInfo = sii9234_info_ptr;
 	if (!pInfo)
 		return;
-	mutex_lock(&mhl_early_suspend_sem);
+	mutex_lock(&mhl_power_suspend_sem);
 	if (!g_bEnterEarlySuspend) {
 		uint8_t		event;
 		uint8_t		eventParameter;
@@ -329,7 +329,7 @@ static void sii9234_irq_do_work(struct work_struct *work)
 			ProcessRcp(event, eventParameter);
 		}
 	}
-	mutex_unlock(&mhl_early_suspend_sem);
+	mutex_unlock(&mhl_power_suspend_sem);
 
 	enable_irq(pInfo->irq);
 }
@@ -537,7 +537,7 @@ static void irq_timeout_handler(struct work_struct *w)
 		update_mhl_status(false, CONNECT_TYPE_UNKNOWN);
 	}
 }
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static int sii9234_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	if (Status_Query() != POWER_STATE_D3)
@@ -560,15 +560,15 @@ void sii9234_change_usb_owner(bool bMHL)
 
 }
 
-static void sii9234_early_suspend(struct early_suspend *h)
+static void sii9234_power_suspend(struct power_suspend *h)
 {
 	T_MHL_SII9234_INFO *pInfo;
-	pInfo = container_of(h, T_MHL_SII9234_INFO, early_suspend);
+	pInfo = container_of(h, T_MHL_SII9234_INFO, power_suspend);
 	if (!pInfo)
 		return;
 	PR_DISP_DEBUG("%s(isMHL=%d)\n", __func__, pInfo->isMHL);
 
-	mutex_lock(&mhl_early_suspend_sem);
+	mutex_lock(&mhl_power_suspend_sem);
 	
 	g_bEnterEarlySuspend = true;
 	suspend_jiffies = jiffies;
@@ -602,22 +602,22 @@ static void sii9234_early_suspend(struct early_suspend *h)
 		TPI_Init();
 		disable_interswitch = false;
 	}
-	mutex_unlock(&mhl_early_suspend_sem);
+	mutex_unlock(&mhl_power_suspend_sem);
 }
 
-static void sii9234_late_resume(struct early_suspend *h)
+static void sii9234_late_resume(struct power_suspend *h)
 {
 	T_MHL_SII9234_INFO *pInfo;
-	pInfo = container_of(h, T_MHL_SII9234_INFO, early_suspend);
+	pInfo = container_of(h, T_MHL_SII9234_INFO, power_suspend);
 	if (!pInfo)
 		return;
 	PR_DISP_DEBUG("sii9234_late_resume()\n");
 
-	mutex_lock(&mhl_early_suspend_sem);
+	mutex_lock(&mhl_power_suspend_sem);
 	queue_delayed_work(pInfo->wq, &pInfo->mhl_on_delay_work, HZ);
 
 	g_bEnterEarlySuspend = false;
-	mutex_unlock(&mhl_early_suspend_sem);
+	mutex_unlock(&mhl_power_suspend_sem);
 }
 static void mhl_turn_off_5v(struct work_struct *w)
 {
@@ -633,11 +633,11 @@ static void mhl_on_delay_handler(struct work_struct *w)
 	if (!pInfo)
 		return;
 
-	mutex_lock(&mhl_early_suspend_sem);
+	mutex_lock(&mhl_power_suspend_sem);
 	if (IsMHLConnection()) {
 		
 		PR_DISP_DEBUG("MHL has connected. No SimulateCableOut!!!\n");
-		mutex_unlock(&mhl_early_suspend_sem);
+		mutex_unlock(&mhl_power_suspend_sem);
 		return;
 	}
 	else {
@@ -648,7 +648,7 @@ static void mhl_on_delay_handler(struct work_struct *w)
 			TPI_Init();
 		}
 	}
-	mutex_unlock(&mhl_early_suspend_sem);
+	mutex_unlock(&mhl_power_suspend_sem);
 }
 #endif
 
@@ -730,7 +730,7 @@ static int sii9234_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&pInfo->init_delay_work, init_delay_handler);
 	INIT_DELAYED_WORK(&pInfo->init_complete_work, init_complete_handler);
 	INIT_DELAYED_WORK(&pInfo->irq_timeout_work, irq_timeout_handler);
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 	INIT_DELAYED_WORK(&pInfo->mhl_on_delay_work, mhl_on_delay_handler);
 	INIT_DELAYED_WORK(&pInfo->turn_off_5v, mhl_turn_off_5v);
 #endif
@@ -755,11 +755,10 @@ static int sii9234_probe(struct i2c_client *client,
 		ret = -ENOMEM;
 		goto err_create_workqueue;
 	}
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	pInfo->early_suspend.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING + 1;
-	pInfo->early_suspend.suspend = sii9234_early_suspend;
-	pInfo->early_suspend.resume = sii9234_late_resume;
-	register_early_suspend(&pInfo->early_suspend);
+#ifdef CONFIG_POWERSUSPEND
+	pInfo->power_suspend.suspend = sii9234_power_suspend;
+	pInfo->power_suspend.resume = sii9234_late_resume;
+	register_power_suspend(&pInfo->power_suspend);
 #endif
 #ifdef CONFIG_CABLE_DETECT_ACCESSORY
 	INIT_WORK(&pInfo->mhl_notifier_work, send_mhl_connect_notify);
@@ -831,8 +830,8 @@ static int sii9234_remove(struct i2c_client *client)
 	if(1)
 		debugfs_remove(dbg_entry_dir);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&pInfo->early_suspend);
+#ifdef CONFIG_POWERSUSPEND
+	unregister_power_suspend(&pInfo->power_suspend);
 #endif
 	destroy_workqueue(pInfo->wq);
 	kfree(pInfo);
@@ -848,7 +847,7 @@ static struct i2c_driver sii9234_driver = {
 	.id_table = sii9234_i2c_id,
 	.probe = sii9234_probe,
 	.remove = sii9234_remove,
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_POWERSUSPEND
 	.suspend = sii9234_suspend,
 	.resume = sii9234_resume,
 #endif
@@ -863,7 +862,7 @@ static void mhl_usb_status_notifier_func(int cable_type)
 	if (!pInfo)
 		return;
 	
-	mutex_lock(&mhl_early_suspend_sem);
+	mutex_lock(&mhl_power_suspend_sem);
 
 	if(cable_get_accessory_type() == DOCK_STATE_MHL && g_bEnterEarlySuspend){
 		if(pInfo->statMHL == CONNECT_TYPE_INTERNAL) {
@@ -874,7 +873,7 @@ static void mhl_usb_status_notifier_func(int cable_type)
 			hdmi_set_switch_state(false);
 		}
 	}
-	mutex_unlock(&mhl_early_suspend_sem);
+	mutex_unlock(&mhl_power_suspend_sem);
 }
 
 static struct t_usb_status_notifier usb_status_notifier = {

@@ -1830,7 +1830,7 @@ static void ville_usb_dpdn_switch(int path)
 		break;
 	}
 	}
-#if defined(CONFIG_FB_MSM_HDMI_MHL_SII9234) && defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_FB_MSM_HDMI_MHL_SII9234) && defined(CONFIG_POWERSUSPEND)
 	sii9234_change_usb_owner((path == PATH_MHL) ? 1 : 0);
 #endif
 }

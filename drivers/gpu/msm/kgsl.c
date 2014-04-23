@@ -753,7 +753,7 @@ const struct dev_pm_ops kgsl_pm_ops = {
 };
 EXPORT_SYMBOL(kgsl_pm_ops);
 
-void kgsl_early_suspend_driver(struct early_suspend *h)
+void kgsl_power_suspend_driver(struct power_suspend *h)
 {
 	struct kgsl_device *device = container_of(h,
 					struct kgsl_device, display_off);
@@ -770,7 +770,7 @@ void kgsl_early_suspend_driver(struct early_suspend *h)
 	mutex_unlock(&device->mutex);
 	KGSL_PWR_WARN(device, "early suspend end\n");
 }
-EXPORT_SYMBOL(kgsl_early_suspend_driver);
+EXPORT_SYMBOL(kgsl_power_suspend_driver);
 
 int kgsl_suspend_driver(struct platform_device *pdev,
 					pm_message_t state)
@@ -787,7 +787,7 @@ int kgsl_resume_driver(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(kgsl_resume_driver);
 
-void kgsl_late_resume_driver(struct early_suspend *h)
+void kgsl_late_resume_driver(struct power_suspend *h)
 {
 	struct kgsl_device *device = container_of(h,
 					struct kgsl_device, display_off);
@@ -807,7 +807,7 @@ void kgsl_late_resume_driver(struct early_suspend *h)
 	 * the desired state here.
 	 *
 	 * Except if active_cnt is non zero which means that
-	 * we probably went to early_suspend with it non zero
+	 * we probably went to power_suspend with it non zero
 	 * and thus the system is still in an active state.
 	 */
 

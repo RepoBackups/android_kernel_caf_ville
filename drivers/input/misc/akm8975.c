@@ -24,7 +24,7 @@
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
 #include <linux/akm8975.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/export.h>
 #include <linux/module.h>
 
@@ -50,7 +50,7 @@ static struct i2c_client *this_client;
 struct akm8975_data {
 	struct input_dev *input_dev;
 	struct work_struct work;
-	struct early_suspend early_suspend_akm;
+	struct power_suspend power_suspend_akm;
 	struct class *htc_ecompass_class;
 	struct device *ecompass_dev;
 };
@@ -736,7 +736,7 @@ static irqreturn_t akm8975_interrupt(int irq, void *dev_id)
 }
 
 #ifdef AKM_EARLY_SUSPEND
-static void akm8975_early_suspend(struct early_suspend *handler)
+static void akm8975_power_suspend(struct power_suspend *handler)
 {
 	DIF("%s", __func__);
 
@@ -747,10 +747,10 @@ static void akm8975_early_suspend(struct early_suspend *handler)
 		wake_up(&open_wq);
 		disable_irq(this_client->irq);
 	} else
-		D("AKM8975 akm8975_early_suspend: PhoneOn_flag is set\n");
+		D("AKM8975 akm8975_power_suspend: PhoneOn_flag is set\n");
 }
 
-static void akm8975_early_resume(struct early_suspend *handler)
+static void akm8975_early_resume(struct power_suspend *handler)
 {
 	DIF("%s", __func__);
 
@@ -1099,9 +1099,9 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	fatal_err_pr_count = 0;
 
 #ifdef AKM_EARLY_SUSPEND
-	akm->early_suspend_akm.suspend = akm8975_early_suspend;
-	akm->early_suspend_akm.resume = akm8975_early_resume;
-	register_early_suspend(&akm->early_suspend_akm);
+	akm->power_suspend_akm.suspend = akm8975_power_suspend;
+	akm->power_suspend_akm.resume = akm8975_early_resume;
+	register_power_suspend(&akm->power_suspend_akm);
 #endif
 	err = akm8975_registerAttr(akm);
 	if (err) {

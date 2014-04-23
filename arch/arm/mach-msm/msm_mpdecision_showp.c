@@ -23,7 +23,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -549,7 +549,7 @@ static struct input_handler mpdec_input_handler = {
 };
 #endif
 
-static void msm_mpdec_early_suspend(struct early_suspend *h) {
+static void msm_mpdec_power_suspend(struct power_suspend *h) {
     int cpu = nr_cpu_ids;
 #ifdef CONFIG_MSM_MPDEC_INPUTBOOST_CPUMIN
     is_screen_on = false;
@@ -576,7 +576,7 @@ static void msm_mpdec_early_suspend(struct early_suspend *h) {
     pr_info(MPDEC_TAG"Screen -> off. Deactivated mpdecision.\n");
 }
 
-static void msm_mpdec_late_resume(struct early_suspend *h) {
+static void msm_mpdec_late_resume(struct power_suspend *h) {
     int cpu = nr_cpu_ids;
 #ifdef CONFIG_MSM_MPDEC_INPUTBOOST_CPUMIN
     is_screen_on = true;
@@ -608,9 +608,9 @@ static void msm_mpdec_late_resume(struct early_suspend *h) {
     }
 }
 
-static struct early_suspend msm_mpdec_early_suspend_handler = {
+static struct power_suspend msm_mpdec_power_suspend_handler = {
     .level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-    .suspend = msm_mpdec_early_suspend,
+    .suspend = msm_mpdec_power_suspend,
     .resume = msm_mpdec_late_resume,
 };
 
@@ -1152,7 +1152,7 @@ static int __init msm_mpdec_init(void) {
         queue_delayed_work(msm_mpdec_workq, &msm_mpdec_work,
                            msecs_to_jiffies(msm_mpdec_tuners_ins.delay));
 
-    register_early_suspend(&msm_mpdec_early_suspend_handler);
+    register_power_suspend(&msm_mpdec_power_suspend_handler);
 
     msm_mpdec_kobject = kobject_create_and_add("msm_mpdecision", kernel_kobj);
     if (msm_mpdec_kobject) {

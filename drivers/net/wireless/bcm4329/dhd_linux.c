@@ -256,9 +256,9 @@ print_tainted()
 
 extern int dhdcdc_set_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
-#endif /* defined(CONFIG_HAS_EARLYSUSPEND) */
+#if defined(CONFIG_POWERSUSPEND)
+#include <linux/powersuspend.h>
+#endif /* defined(CONFIG_POWERSUSPEND) */
 
 #ifdef PKT_FILTER_SUPPORT
 extern void dhd_pktfilter_offload_set(dhd_pub_t * dhd, char *arg);
@@ -332,9 +332,9 @@ typedef struct dhd_info {
 	wait_queue_head_t ctrl_wait;
 	atomic_t pend_8021x_cnt;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend;
+#endif /* CONFIG_POWERSUSPEND */
 } dhd_info_t;
 
 /* Definitions to provide path to the firmware and nvram
@@ -561,7 +561,7 @@ static void dhd_set_packet_filter(int value, dhd_pub_t *dhd)
 
 
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 {
 	int power_mode = PM_MAX;
@@ -643,9 +643,9 @@ static void dhd_suspend_resume_helper(struct dhd_info *dhd, int val)
 	dhd_os_wake_unlock(dhdp);
 }
 
-static void dhd_early_suspend(struct early_suspend *h)
+static void dhd_power_suspend(struct power_suspend *h)
 {
-	struct dhd_info *dhd = container_of(h, struct dhd_info, early_suspend);
+	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
 
 	DHD_TRACE(("%s: enter\n", __FUNCTION__));
 
@@ -653,16 +653,16 @@ static void dhd_early_suspend(struct early_suspend *h)
 		dhd_suspend_resume_helper(dhd, 1);
 }
 
-static void dhd_late_resume(struct early_suspend *h)
+static void dhd_late_resume(struct power_suspend *h)
 {
-	struct dhd_info *dhd = container_of(h, struct dhd_info, early_suspend);
+	struct dhd_info *dhd = container_of(h, struct dhd_info, power_suspend);
 
 	DHD_TRACE(("%s: enter\n", __FUNCTION__));
 
 	if (dhd)
 		dhd_suspend_resume_helper(dhd, 0);
 }
-#endif /* defined(CONFIG_HAS_EARLYSUSPEND) */
+#endif /* defined(CONFIG_POWERSUSPEND) */
 
 /*
  * Generalized timeout mechanism.  Uses spin sleep with exponential back-off until
@@ -2199,11 +2199,11 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 	register_pm_notifier(&dhd_sleep_pm_notifier);
 #endif /*  (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP) */
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	dhd->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 20;
-	dhd->early_suspend.suspend = dhd_early_suspend;
-	dhd->early_suspend.resume = dhd_late_resume;
-	register_early_suspend(&dhd->early_suspend);
+#ifdef CONFIG_POWERSUSPEND
+	dhd->power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 20;
+	dhd->power_suspend.suspend = dhd_power_suspend;
+	dhd->power_suspend.resume = dhd_late_resume;
+	register_power_suspend(&dhd->power_suspend);
 #endif
 
 	register_inetaddr_notifier(&dhd_notifier);
@@ -2554,10 +2554,10 @@ dhd_detach(dhd_pub_t *dhdp)
 
 			unregister_inetaddr_notifier(&dhd_notifier);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-			if (dhd->early_suspend.suspend)
-				unregister_early_suspend(&dhd->early_suspend);
-#endif	/* defined(CONFIG_HAS_EARLYSUSPEND) */
+#if defined(CONFIG_POWERSUSPEND)
+			if (dhd->power_suspend.suspend)
+				unregister_power_suspend(&dhd->power_suspend);
+#endif	/* defined(CONFIG_POWERSUSPEND) */
 #if defined(CONFIG_WIRELESS_EXT)
 			/* Attach and link in the iw */
 			wl_iw_detach();
@@ -3066,7 +3066,7 @@ int net_os_set_suspend_disable(struct net_device *dev, int val)
 int net_os_set_suspend(struct net_device *dev, int val)
 {
 	int ret = 0;
-#if defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_POWERSUSPEND)
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(dev);
 
 	if (dhd) {
@@ -3074,7 +3074,7 @@ int net_os_set_suspend(struct net_device *dev, int val)
 		ret = dhd_set_suspend(val, &dhd->pub);
 		dhd_os_proto_unblock(&dhd->pub);
 	}
-#endif /* defined(CONFIG_HAS_EARLYSUSPEND) */
+#endif /* defined(CONFIG_POWERSUSPEND) */
 	return ret;
 }
 

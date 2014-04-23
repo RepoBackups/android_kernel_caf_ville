@@ -219,7 +219,7 @@ typedef struct dhd_pub {
 	int dtim_skip;         /* dtim skip , default 0 means wake each dtim */
 
 #ifdef PKT_FILTER_SUPPORT
-	int early_suspended;	/* Early suspend status */
+	int power_suspended;	/* Early suspend status */
 	int dhcp_in_progress;	/* DHCP period */
 #endif
 

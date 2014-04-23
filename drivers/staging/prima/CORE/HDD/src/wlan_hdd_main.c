@@ -277,7 +277,7 @@ struct notifier_block hdd_netdev_notifier = {
  *   Function definitions
  *-------------------------------------------------------------------------*/
 extern int isWDresetInProgress(void);
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 extern void register_wlan_suspend(void);
 extern void unregister_wlan_suspend(void);
 void hdd_unregister_mcast_bcast_filter(hdd_context_t *pHddCtx);
@@ -2660,7 +2660,7 @@ void hdd_wlan_exit(hdd_context_t *pHddCtx)
    //netif_tx_disable(pWlanDev);
    //netif_carrier_off(pWlanDev);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
    // unregister suspend/resume callbacks
    if(pHddCtx->cfg_ini->nEnableSuspend)
    {
@@ -2855,7 +2855,7 @@ void hdd_wlan_exit(hdd_context_t *pHddCtx)
    nl_srv_exit();
 
    //This requires pMac access, Call this before vos_close().
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
    hdd_unregister_mcast_bcast_filter(pHddCtx);
 #endif
 
@@ -3728,7 +3728,7 @@ int hdd_wlan_startup(struct device *dev )
       goto err_unregister_pmops;
    }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
    // Register suspend/resume callbacks
    if(pHddCtx->cfg_ini->nEnableSuspend)
    {
@@ -3775,7 +3775,7 @@ int hdd_wlan_startup(struct device *dev )
       goto err_nl_srv;
    }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
    hdd_register_mcast_bcast_filter(pHddCtx);
 #endif
 #ifdef CONFIG_CFG80211

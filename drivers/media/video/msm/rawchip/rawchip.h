@@ -17,7 +17,7 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/miscdevice.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/wakelock.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
