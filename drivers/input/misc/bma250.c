@@ -36,6 +36,10 @@
 
 #define RETRY_TIMES	10
 
+#ifdef CONFIG_POWERSUSPEND
+#define POWERSUSPEND_BMA
+#endif
+
 static struct i2c_client *this_client;
 
 struct bma250_data {
@@ -194,6 +198,16 @@ static int BMA_set_mode(unsigned char mode)
 
 	memset(buffer, 0, 2);
 
+	if (pdata->power_LPM && (mode < 2)) {
+		switch (mode) {
+		case bma250_MODE_NORMAL:
+			pdata->power_LPM(0);
+			break;
+		default:
+			break;
+		}
+	}
+
 	D("%s: mode = 0x%02x\n", __func__, mode);
 	if (mode < 2) {
 		buffer[0] = bma250_MODE_CTRL_REG;
@@ -223,6 +237,15 @@ static int BMA_set_mode(unsigned char mode)
 	if (mode == bma250_MODE_NORMAL)
 		usleep(2000);
 	
+	if (pdata->power_LPM && (mode < 2)) {
+		switch (mode) {
+		case bma250_MODE_SUSPEND:
+			pdata->power_LPM(1);
+			break;
+		default:
+			break;
+		}
+	}
 
 	return ret;
 }
@@ -378,7 +401,7 @@ static long bma_ioctl(struct file *file, unsigned int cmd,
 	return 0;
 }
 
-#ifdef EARLY_SUSPEND_BMA
+#ifdef POWERSUSPEND_BMA
 
 static void bma250_power_suspend(struct power_suspend *handler)
 {
@@ -604,7 +627,7 @@ int bma250_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit_misc_device_register_failed;
 	}
 
-#ifdef EARLY_SUSPEND_BMA
+#ifdef POWERSUSPEND_BMA
 	bma->power_suspend.suspend = bma250_power_suspend;
 	bma->power_suspend.resume = bma250_late_resume;
 	register_power_suspend(&bma->power_suspend);
@@ -648,7 +671,7 @@ static struct i2c_driver bma250_driver = {
 	.remove = bma250_remove,
 	.id_table	= bma250_id,
 
-#ifndef EARLY_SUSPEND_BMA
+#ifndef POWERSUSPEND_BMA
 	.suspend = bma250_suspend,
 	.resume = bma250_resume,
 #endif
