@@ -3401,7 +3401,6 @@ static void __init fighter_init(void)
 	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
 		pr_err("meminfo_init() failed!\n");
 
-	htc_add_ramconsole_devices();
 	platform_device_register(&msm_gpio_device);
 
 	msm_tsens_early_init(&msm_tsens_pdata);
