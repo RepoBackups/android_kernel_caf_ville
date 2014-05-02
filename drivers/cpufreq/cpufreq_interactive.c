@@ -803,7 +803,7 @@ static ssize_t show_target_loads(
 
 	sprintf(buf + ret - 1, "\n");
 	spin_unlock_irqrestore(&target_loads_lock, flags);
-	return ret;
+	return ret - 1;
 }
 
 static ssize_t store_target_loads(
@@ -846,7 +846,7 @@ static ssize_t show_above_hispeed_delay(
 
 	sprintf(buf + ret - 1, "\n");
 	spin_unlock_irqrestore(&above_hispeed_delay_lock, flags);
-	return ret;
+	return ret - 1;
 }
 
 static ssize_t store_above_hispeed_delay(
