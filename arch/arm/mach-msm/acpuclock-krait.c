@@ -1120,46 +1120,6 @@ static void __init krait_apply_vmin(struct acpu_level *tbl)
 	}
 }
 
-#ifdef CONFIG_CMDLINE_OPTIONS2
-uint32_t acpu_check_khz_value(unsigned long khz)
-{
-	struct acpu_level *f;
-
-	if (khz > 1728000)
-		return CONFIG_MSM_CPU_FREQ_MAX;
-
-	if (khz < 384000)
-		return CONFIG_MSM_CPU_FREQ_MIN;
-
-	for (f = drv.acpu_freq_tbl; f->speed.khz != 0; f++) {
-		if (khz < 384000) {
-			if (f->speed.khz == (khz*1000))
-				return f->speed.khz;
-			if ((khz*1000) > f->speed.khz) {
-				f++;
-				if ((khz*1000) < f->speed.khz) {
-					f--;
-					return f->speed.khz;
-				}
-				f--;
-			}
-		}
-		if (f->speed.khz == khz) {
-			return 1;
-		}
-		if (khz > f->speed.khz) {
-			f++;
-			if (khz < f->speed.khz) {
-				f--;
-				return f->speed.khz;
-			}
-			f--;
-		}
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL(acpu_check_khz_value);
 /* end cmdline_khz */
 #endif
 
