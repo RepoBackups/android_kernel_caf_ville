@@ -1120,9 +1120,6 @@ static void __init krait_apply_vmin(struct acpu_level *tbl)
 	}
 }
 
-/* end cmdline_khz */
-#endif
-
 void __init get_krait_bin_format_a(void __iomem *base, struct bin_info *bin)
 {
 	u32 pte_efuse = readl_relaxed(base);
