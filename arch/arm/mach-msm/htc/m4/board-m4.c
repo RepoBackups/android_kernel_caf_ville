@@ -3749,8 +3749,6 @@ static void __init m4_init(void)
 	if (board_mfg_mode() == MFG_MODE_MINI)
 		platform_device_register(&device_htc_ramdump);
 
-	htc_add_ramconsole_devices();
-
 	platform_device_register(&msm_gpio_device);
 	msm_tsens_early_init(&msm_tsens_pdata);
 	msm_thermal_init(&msm_thermal_pdata);
