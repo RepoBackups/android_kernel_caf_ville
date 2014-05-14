@@ -326,9 +326,6 @@ static int ville_send_display_cmds(struct dsi_cmd_desc *cmd, int cnt,
 	int ret = 0;
 	struct dcs_cmd_req cmdreq;
 
-	if (cmd == NULL || (cnt <= 0))
-		return -1;
-
 	cmdreq.cmds = cmd;
 	cmdreq.cmds_cnt = cnt;
 	cmdreq.flags = CMD_REQ_COMMIT;
