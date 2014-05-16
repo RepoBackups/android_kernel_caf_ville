@@ -901,6 +901,7 @@ int msm_mctl_pp_done(
 	spin_lock_irqsave(&p_mctl->pp_info.lock, flags);
 	image_mode = msm_mctl_pp_path_to_img_mode(frame.path);
 	if (image_mode < 0) {
+		spin_unlock_irqrestore(&p_mctl->pp_info.lock, flags);
 		pr_err("%s Invalid image mode\n", __func__);
 		return image_mode;
 	}
