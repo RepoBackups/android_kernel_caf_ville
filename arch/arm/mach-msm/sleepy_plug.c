@@ -1,7 +1,7 @@
 /*
  * Author: Davide Rombolà aka rmbq <davide.rombola@gmail.com>
  *
- * sleepy_plug: cpu_hotplug driver based on sleepy_plug by faux123
+ * sleepy_plug: cpu_hotplug driver based on intelli_plug by faux123
  *
  * Copyright 2012 Paul Reioux
  * Copyright 2014 Davide Rombolà
@@ -32,14 +32,12 @@
 //#define DEBUG_SLEEPY_PLUG
 #undef DEBUG_SLEEPY_PLUG
 
-#define SLEEPY_PLUG_MAJOR_VERSION	1
-#define SLEEPY_PLUG_MINOR_VERSION	6
+#define SLEEPY_PLUG_MAJOR_VERSION	2
+#define SLEEPY_PLUG_MINOR_VERSION	0
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
 
-#define DOWN_THRESHOLD			8
-#define UP_THRESHOLD			11
 #define PEAK_THRESHOLD			30
 
 #define RQ_VALUES_ARRAY_DIM		5
@@ -52,9 +50,21 @@ static struct workqueue_struct *sleepy_plug_wq;
 
 enum mp_decisions {
 	DO_NOTHING,
-	CPU_UP,
-	CPU_DOWN
+	ONE_CPU_UP,
+	TWO_CPU_UP,
+#if CONFIG_NR_CPUS == 4
+	THREE_CPU_UP,
+	FOUR_CPU_UP,
+#endif
 };
+
+#if CONFIG_NR_CPUS == 2
+static unsigned int up_thresholds[2] = {0, 11};
+static unsigned int down_thresholds[2] = {0, 8};
+#else
+static unsigned int up_thresholds[4] = {0, 11, 17, 25};
+static unsigned int down_thresholds[4] = {0, 8, 14, 22};
+#endif
 
 static unsigned int sleepy_plug_active = 1;
 module_param(sleepy_plug_active, uint, 0644);
@@ -95,13 +105,47 @@ static enum mp_decisions mp_decision(void)
 		avg = calc_rq_avg(rq_info.rq_avg);
 	nr_cpu_online = num_online_cpus();
 
-	if(nr_cpu_online == 1 && avg >= UP_THRESHOLD)
-		decision = CPU_UP;
-	else if(nr_cpu_online == 2 && avg < DOWN_THRESHOLD)
-		decision = CPU_DOWN;
+	for(i = CONFIG_NR_CPUS - 1; i > 0; i--) {
+		if(avg > up_thresholds[i] && nr_cpu_online - 1 < i) {
+			switch(i) {
+				case 1:
+					decision = TWO_CPU_UP;
+					break;
+#if CONFIG_NR_CPUS == 4
+				case 2:
+					decision = THREE_CPU_UP;
+					break;
+				case 3:
+					decision = FOUR_CPU_UP;
+					break;
+#endif
+			}
+			break;
+		}
+	}
+	if(decision == DO_NOTHING) {
+		for(i = 1; i < CONFIG_NR_CPUS; i++) {
+			if(avg < down_thresholds[i] && nr_cpu_online - 1 >= i) {
+				switch(i) {
+					case 1:
+						decision = ONE_CPU_UP;
+						break;
+#if CONFIG_NR_CPUS == 4
+					case 2:
+						decision = TWO_CPU_UP;
+						break;
+					case 3:
+						decision = THREE_CPU_UP;
+						break;
+#endif
+				}
+				break;
+			}
+		}
+	}
 
 #ifdef DEBUG_SLEEPY_PLUG
-	pr_info("[SLEEPY] nr_cpu_online: %d|avg: %d|max: %d|new? %d\n",nr_cpu_online,crav.avg,crav.max,crav.max_is_new == true?1:0);
+	pr_info("[SLEEPY] nr_cpu_online: %d|avg: %d\n",nr_cpu_online,avg);
 #endif
 	return decision;
 }
@@ -109,24 +153,61 @@ static enum mp_decisions mp_decision(void)
 static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 {
 	enum mp_decisions decision = DO_NOTHING;
-
+	int nr_cpu_online;
+	
 	if (sleepy_plug_active == 1) {
-		// detect artificial loads or constant loads
-		// using msm rqstats
-
 #ifdef DEBUG_SLEEPY_PLUG
 		pr_info("decision: %d\n",decision);
 #endif
 		if (!suspended) {
 			decision = mp_decision();
-			if (decision == CPU_UP) {
+			sampling_time = BUSY_SAMPLING_MS;
+
+			if(decision == DO_NOTHING)
+				sampling_time = DEF_SAMPLING_MS;
+			else if (decision == ONE_CPU_UP) {
+				nr_cpu_online = num_online_cpus() - 1;
+				for(;nr_cpu_online > 0;nr_cpu_online--)
+					cpu_down(nr_cpu_online);
+
+				sampling_time = DEF_SAMPLING_MS;
+			} 
+			else if(decision == TWO_CPU_UP){
+				nr_cpu_online = num_online_cpus() - 1;
+				if(nr_cpu_online < 1)
+					cpu_up(1);
+				else {
+					for(;nr_cpu_online > 1;nr_cpu_online--) {
+						cpu_down(nr_cpu_online);
+						sampling_time = DEF_SAMPLING_MS;
+					}
+				}
+			} 
+#if CONFIG_NR_CPUS == 4
+			else if(decision == THREE_CPU_UP){
+				nr_cpu_online = num_online_cpus() - 1;
+				if(nr_cpu_online < 2) {
+					for(;nr_cpu_online <= 2; nr_cpu_online++)
+						cpu_up(nr_cpu_online);
+					/*if(nr_cpu_online < 1)
+						cpu_up(1);
+					cpu_up(2);*/
+				}
+				else {
+					for(;nr_cpu_online > 2;nr_cpu_online--) {
+						cpu_down(nr_cpu_online);
+						sampling_time = DEF_SAMPLING_MS;
+					}
+				}
+			} 
+			else if(decision == FOUR_CPU_UP){
 				cpu_up(1);
+				cpu_up(2);
+				cpu_up(3);
 				sampling_time = BUSY_SAMPLING_MS;
-			} else if(decision == CPU_DOWN){
-				cpu_down(1);
-				sampling_time = DEF_SAMPLING_MS;
-			} else if(decision == DO_NOTHING)
-				sampling_time = DEF_SAMPLING_MS;
+			} 
+
+#endif
 		}
 #ifdef DEBUG_SLEEPY_PLUG
 		else
@@ -140,13 +221,18 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 #ifdef CONFIG_POWERSUSPEND
 static void sleepy_plug_suspend(struct power_suspend *h)
 {
+	int nr_cpu_online;
+
 	flush_workqueue(sleepy_plug_wq);
 
 	mutex_lock(&sleepy_plug_mutex);
 	suspended = true;
 	mutex_unlock(&sleepy_plug_mutex);
 
-	cpu_down(1);
+	nr_cpu_online = num_online_cpus() - 1;
+	for(;nr_cpu_online > 0;nr_cpu_online--) {
+		cpu_down(nr_cpu_online);
+	}
 }
 
 static void __cpuinit sleepy_plug_resume(struct power_suspend *h)
