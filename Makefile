@@ -358,7 +358,8 @@ CUSTOM_FLAG	= -fgcse-lm -fgcse-sm -fsched-spec-load -fgcse-after-reload \
 		  -mvectorize-with-neon-quad -marm \
 		  -funroll-loops -mvectorize-with-neon-quad -pipe \
 		  -fgraphite -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
-		  -munaligned-access -fpredictive-commoning
+		  -munaligned-access -fpredictive-commoning \
+		  -funsafe-loop-optimizations -fivopts -ftree-loop-im -ftree-loop-ivcanon -ffunction-sections -fdata-sections -funswitch-loops -frename-registers -frerun-cse-after-loop -fomit-frame-pointer -fgcse-las -fweb -ftracer
 
 CFLAGS_MODULE   = -DMODULE -fno-pic $(CUSTOM_FLAG)
 AFLAGS_MODULE   = -DMODULE $(CUSTOM_FLAG)
