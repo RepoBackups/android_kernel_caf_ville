@@ -49,12 +49,12 @@ struct delayed_work sleepy_plug_work;
 static struct workqueue_struct *sleepy_plug_wq;
 
 enum mp_decisions {
-	DO_NOTHING,
-	ONE_CPU_UP,
-	TWO_CPU_UP,
+	DO_NOTHING = 0,
+	ONE_CPU_UP = 1,
+	TWO_CPU_UP = 2,
 #if CONFIG_NR_CPUS == 4
-	THREE_CPU_UP,
-	FOUR_CPU_UP,
+	THREE_CPU_UP = 3,
+	FOUR_CPU_UP = 4,
 #endif
 };
 
@@ -71,7 +71,7 @@ module_param(sleepy_plug_active, uint, 0644);
 
 static unsigned int sampling_time = DEF_SAMPLING_MS;
 static bool suspended = false;
-static unsigned int rq_values[RQ_VALUES_ARRAY_DIM] = {6};
+static unsigned int rq_values[RQ_VALUES_ARRAY_DIM] = {30};
 
 static int calc_rq_avg(int last_rq_depth) {
 	int i;
@@ -166,26 +166,13 @@ static void set_cpus(int n_cpus_on_requested) {
 
 static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 {
-	enum mp_decisions decision;
-	
 	if (likely(sleepy_plug_active == 1)) {
 #ifdef DEBUG_SLEEPY_PLUG
 		pr_info("decision: %d\n",decision);
 #endif
 		if (!suspended) {
-			decision = mp_decision();
 			sampling_time = DEF_SAMPLING_MS;
-
-			if (decision == ONE_CPU_UP)
-				set_cpus(1);
-			else if(decision == TWO_CPU_UP)
-				set_cpus(2);
-#if CONFIG_NR_CPUS == 4
-			else if(decision == THREE_CPU_UP)
-				set_cpus(3);
-			else if(decision == FOUR_CPU_UP)
-				set_cpus(4);
-#endif
+			set_cpus(mp_decision());
 		}
 #ifdef DEBUG_SLEEPY_PLUG
 		else
