@@ -33,7 +33,7 @@
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	2
-#define SLEEPY_PLUG_MINOR_VERSION	0
+#define SLEEPY_PLUG_MINOR_VERSION	1
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
@@ -150,63 +150,41 @@ static enum mp_decisions mp_decision(void)
 	return decision;
 }
 
+static void set_cpus(int n_cpus_on_requested) {
+	int nr_cpus_online = num_online_cpus();
+
+	if(nr_cpus_online < n_cpus_on_requested) {
+		sampling_time = BUSY_SAMPLING_MS;
+		for(;nr_cpus_online < n_cpus_on_requested;nr_cpus_online++)
+			cpu_up(nr_cpus_online);
+	}
+	else {
+		for(nr_cpus_online--;nr_cpus_online > n_cpus_on_requested - 1;nr_cpus_online--)
+			cpu_down(nr_cpus_online);
+	}
+}
+
 static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 {
-	enum mp_decisions decision = DO_NOTHING;
-	int nr_cpu_online;
+	enum mp_decisions decision;
 	
-	if (sleepy_plug_active == 1) {
+	if (likely(sleepy_plug_active == 1)) {
 #ifdef DEBUG_SLEEPY_PLUG
 		pr_info("decision: %d\n",decision);
 #endif
 		if (!suspended) {
 			decision = mp_decision();
-			sampling_time = BUSY_SAMPLING_MS;
+			sampling_time = DEF_SAMPLING_MS;
 
-			if(decision == DO_NOTHING)
-				sampling_time = DEF_SAMPLING_MS;
-			else if (decision == ONE_CPU_UP) {
-				nr_cpu_online = num_online_cpus() - 1;
-				for(;nr_cpu_online > 0;nr_cpu_online--)
-					cpu_down(nr_cpu_online);
-
-				sampling_time = DEF_SAMPLING_MS;
-			} 
-			else if(decision == TWO_CPU_UP){
-				nr_cpu_online = num_online_cpus() - 1;
-				if(nr_cpu_online < 1)
-					cpu_up(1);
-				else {
-					for(;nr_cpu_online > 1;nr_cpu_online--) {
-						cpu_down(nr_cpu_online);
-						sampling_time = DEF_SAMPLING_MS;
-					}
-				}
-			} 
+			if (decision == ONE_CPU_UP)
+				set_cpus(1);
+			else if(decision == TWO_CPU_UP)
+				set_cpus(2);
 #if CONFIG_NR_CPUS == 4
-			else if(decision == THREE_CPU_UP){
-				nr_cpu_online = num_online_cpus() - 1;
-				if(nr_cpu_online < 2) {
-					for(;nr_cpu_online <= 2; nr_cpu_online++)
-						cpu_up(nr_cpu_online);
-					/*if(nr_cpu_online < 1)
-						cpu_up(1);
-					cpu_up(2);*/
-				}
-				else {
-					for(;nr_cpu_online > 2;nr_cpu_online--) {
-						cpu_down(nr_cpu_online);
-						sampling_time = DEF_SAMPLING_MS;
-					}
-				}
-			} 
-			else if(decision == FOUR_CPU_UP){
-				cpu_up(1);
-				cpu_up(2);
-				cpu_up(3);
-				sampling_time = BUSY_SAMPLING_MS;
-			} 
-
+			else if(decision == THREE_CPU_UP)
+				set_cpus(3);
+			else if(decision == FOUR_CPU_UP)
+				set_cpus(4);
 #endif
 		}
 #ifdef DEBUG_SLEEPY_PLUG
