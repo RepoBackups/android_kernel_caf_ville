@@ -33,7 +33,7 @@
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	2
-#define SLEEPY_PLUG_MINOR_VERSION	1
+#define SLEEPY_PLUG_MINOR_VERSION	2
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
@@ -62,16 +62,15 @@ enum mp_decisions {
 static unsigned int up_thresholds[2] = {0, 11};
 static unsigned int down_thresholds[2] = {0, 8};
 #else
-static unsigned int up_thresholds[4] = {0, 11, 17, 25};
-static unsigned int down_thresholds[4] = {0, 8, 14, 22};
+static unsigned int up_thresholds[4] = {0, 11, 18, 27};
+static unsigned int down_thresholds[4] = {0, 8, 15, 24};
 #endif
 
 static unsigned int sleepy_plug_active = 1;
-module_param(sleepy_plug_active, uint, 0644);
 
 static unsigned int sampling_time = DEF_SAMPLING_MS;
 static bool suspended = false;
-static unsigned int rq_values[RQ_VALUES_ARRAY_DIM] = {30};
+static unsigned int rq_values[RQ_VALUES_ARRAY_DIM] = {PEAK_THRESHOLD};
 
 static int calc_rq_avg(int last_rq_depth) {
 	int i;
@@ -166,19 +165,17 @@ static void set_cpus(int n_cpus_on_requested) {
 
 static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 {
-	if (likely(sleepy_plug_active == 1)) {
 #ifdef DEBUG_SLEEPY_PLUG
-		pr_info("decision: %d\n",decision);
+	pr_info("decision: %d\n",decision);
 #endif
-		if (!suspended) {
-			sampling_time = DEF_SAMPLING_MS;
-			set_cpus(mp_decision());
-		}
-#ifdef DEBUG_SLEEPY_PLUG
-		else
-			pr_info("sleepy_plug is suspened!\n");
-#endif
+	if (!suspended) {
+		sampling_time = DEF_SAMPLING_MS;
+		set_cpus(mp_decision());
 	}
+#ifdef DEBUG_SLEEPY_PLUG
+	else
+		pr_info("sleepy_plug is suspened!\n");
+#endif
 	queue_delayed_work_on(0, sleepy_plug_wq, &sleepy_plug_work,
 		msecs_to_jiffies(sampling_time));
 }
@@ -290,6 +287,56 @@ static struct input_handler sleepy_plug_input_handler = {
 	.id_table       = sleepy_plug_ids,
 };
 
+/********************* SYSF START *********************/
+static ssize_t sleepy_plug_active_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	size_t count = 0;
+
+	count += sprintf(buf, "%d\n", sleepy_plug_active);
+
+	return count;
+}
+
+static ssize_t sleepy_plug_active_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
+	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
+		if (sleepy_plug_active != buf[0] - '0') {
+			sleepy_plug_active = buf[0] - '0';
+
+			if(sleepy_plug_active == 0) {
+				int nr_cpu_online = CONFIG_NR_CPUS - 1;
+				flush_workqueue(sleepy_plug_wq);
+				for(;nr_cpu_online > 0;nr_cpu_online--)
+					cpu_up(nr_cpu_online);
+			} else {
+				queue_delayed_work_on(0, sleepy_plug_wq, &sleepy_plug_work,
+					msecs_to_jiffies(10));
+			}
+		}
+
+	return count;
+}
+static DEVICE_ATTR(sleepyplug, (S_IWUSR|S_IRUGO),
+	sleepy_plug_active_show, sleepy_plug_active_store);
+
+static struct kobject *android_touchkey_kobj;
+
+static int sleepyplug_sysfs_init(void) {
+	int ret;
+
+	android_touchkey_kobj = kobject_create_and_add("sleepy_plug", NULL);
+	if (android_touchkey_kobj == NULL) {
+		printk(KERN_ERR "%s: subsystem_register failed\n", __func__);
+		ret = -ENOMEM;
+		return ret;
+	}
+	ret = sysfs_create_file(android_touchkey_kobj, &dev_attr_sleepyplug.attr);
+	if (ret) {
+		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
+		return ret;
+	}
+
+	return 0;
+}
+/********************* SYSF END ***********************/
 int __init sleepy_plug_init(void)
 {
 	int rc;
@@ -306,6 +353,8 @@ int __init sleepy_plug_init(void)
 #ifdef CONFIG_POWERSUSPEND
 	register_power_suspend(&sleepy_plug_power_suspend_driver);
 #endif
+
+	sleepyplug_sysfs_init();
 
 	INIT_DELAYED_WORK(&sleepy_plug_work, sleepy_plug_work_fn);
 	queue_delayed_work_on(0, sleepy_plug_wq, &sleepy_plug_work,
