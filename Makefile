@@ -245,8 +245,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
-HOSTCXXFLAGS = -O2
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer
+HOSTCXXFLAGS = -O3
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -359,7 +359,9 @@ CUSTOM_FLAG	= -fgcse-lm -fgcse-sm -fsched-spec-load -fgcse-after-reload \
 		  -funroll-loops -mvectorize-with-neon-quad -pipe \
 		  -fgraphite -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block \
 		  -munaligned-access -fpredictive-commoning \
-		  -funsafe-loop-optimizations -fivopts -ftree-loop-im -ftree-loop-ivcanon -ffunction-sections -fdata-sections -funswitch-loops -frename-registers -frerun-cse-after-loop -fomit-frame-pointer -fgcse-las -fweb -ftracer
+		  -funsafe-loop-optimizations -fivopts -ftree-loop-im -ftree-loop-ivcanon -ffunction-sections \
+		  -fdata-sections -funswitch-loops -frename-registers \
+		  -frerun-cse-after-loop -fomit-frame-pointer -fgcse-las -fweb
 
 CFLAGS_MODULE   = -DMODULE -fno-pic $(CUSTOM_FLAG)
 AFLAGS_MODULE   = -DMODULE $(CUSTOM_FLAG)
