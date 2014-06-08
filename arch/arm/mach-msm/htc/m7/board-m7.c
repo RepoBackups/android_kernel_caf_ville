@@ -2526,9 +2526,6 @@ static struct msm_thermal_data msm_thermal_pdata = {
 	.limit_temp_degC = 60,
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
-	.core_limit_temp_degC = 80,
-	.core_temp_hysteresis_degC = 10,
-	.core_control_mask = 0xe,
 };
 
 #define MSM_SHARED_RAM_PHYS 0x80000000
@@ -4783,7 +4780,6 @@ static void __init m7_common_init(void)
 	int rc = 0;
 	struct kobject *properties_kobj;
 
-	htc_add_ramconsole_devices();
 	platform_device_register(&msm_gpio_device);
 	if (cpu_is_apq8064ab())
 		apq8064ab_update_krait_spm();
