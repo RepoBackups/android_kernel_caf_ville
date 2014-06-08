@@ -236,7 +236,6 @@ config ARCH_APQ8064
 	select CPU_HAS_L2_PMU
 	select HOLES_IN_ZONE if SPARSEMEM
 	select CLEANCACHE
-	select QCACHE
 	select MIGHT_HAVE_PCI
 	select ARCH_SUPPORTS_MSI
 	select ARM_HAS_SG_CHAIN
