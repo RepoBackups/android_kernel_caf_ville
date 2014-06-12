@@ -1,5 +1,3 @@
-CFLAGS_rtac.o += -Os
-
 ifdef CONFIG_ARCH_MSM8X60
 obj-y += audio_dev_ctl.o
 obj-y += board-msm8x60-audio.o
