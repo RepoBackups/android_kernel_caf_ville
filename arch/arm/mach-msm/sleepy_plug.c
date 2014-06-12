@@ -33,7 +33,7 @@
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	2
-#define SLEEPY_PLUG_MINOR_VERSION	2
+#define SLEEPY_PLUG_MINOR_VERSION	3
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
@@ -59,11 +59,11 @@ enum mp_decisions {
 };
 
 #if CONFIG_NR_CPUS == 2
-static unsigned int up_thresholds[2] = {0, 11};
-static unsigned int down_thresholds[2] = {0, 8};
+static unsigned int up_thresholds[3] = {0, 11, UINT_MAX};
+static unsigned int down_thresholds[3] = {0, 8, PEAK_THRESHOLD};
 #else
-static unsigned int up_thresholds[4] = {0, 11, 18, 27};
-static unsigned int down_thresholds[4] = {0, 8, 15, 24};
+static unsigned int up_thresholds[5] = {0, 11, 18, 27, UINT_MAX};
+static unsigned int down_thresholds[5] = {0, 8, 15, 24, PEAK_THRESHOLD};
 #endif
 
 static unsigned int sleepy_plug_active = 1;
@@ -93,56 +93,27 @@ static enum mp_decisions mp_decision(void)
 	int avg,i;
 	enum mp_decisions decision = DO_NOTHING;
 
+	avg = calc_rq_avg(rq_info.rq_avg);
+	
 	if(rq_info.rq_avg > PEAK_THRESHOLD) {
-		for(i = 0;i < RQ_VALUES_ARRAY_DIM-1;i++) 
-			rq_values[i] = rq_values[i+1];
-		rq_values[RQ_VALUES_ARRAY_DIM-1] = rq_info.rq_avg;
-
-		avg = rq_info.rq_avg;
-	}
-	else
-		avg = calc_rq_avg(rq_info.rq_avg);
-	nr_cpu_online = num_online_cpus();
-
-	for(i = CONFIG_NR_CPUS - 1; i > 0; i--) {
-		if(avg > up_thresholds[i] && nr_cpu_online - 1 < i) {
-			switch(i) {
-				case 1:
-					decision = TWO_CPU_UP;
-					break;
-#if CONFIG_NR_CPUS == 4
-				case 2:
-					decision = THREE_CPU_UP;
-					break;
-				case 3:
-					decision = FOUR_CPU_UP;
-					break;
+#if CONFIG_NR_CPUS == 2
+		decision = TWO_CPU_UP;
+#else
+		decision = FOUR_CPU_UP;
 #endif
-			}
-			break;
-		}
 	}
-	if(decision == DO_NOTHING) {
-		for(i = 1; i < CONFIG_NR_CPUS; i++) {
-			if(avg < down_thresholds[i] && nr_cpu_online - 1 >= i) {
-				switch(i) {
-					case 1:
-						decision = ONE_CPU_UP;
-						break;
-#if CONFIG_NR_CPUS == 4
-					case 2:
-						decision = TWO_CPU_UP;
-						break;
-					case 3:
-						decision = THREE_CPU_UP;
-						break;
-#endif
-				}
+	else {
+		nr_cpu_online = num_online_cpus();
+
+		for(i = 1; i <= CONFIG_NR_CPUS; i++) {
+			if(avg >= down_thresholds[i - 1] && avg <= up_thresholds[i] && avg <= down_thresholds[i]) {
+				if(nr_cpu_online != i)
+					decision = i;
 				break;
 			}
 		}
 	}
-
+}
 #ifdef DEBUG_SLEEPY_PLUG
 	pr_info("[SLEEPY] nr_cpu_online: %d|avg: %d\n",nr_cpu_online,avg);
 #endif
@@ -152,13 +123,15 @@ static enum mp_decisions mp_decision(void)
 static void set_cpus(int n_cpus_on_requested) {
 	int nr_cpus_online = num_online_cpus();
 
+	if(n_cpus_on_requested == DO_NOTHING) return;
+	
 	if(nr_cpus_online < n_cpus_on_requested) {
 		sampling_time = BUSY_SAMPLING_MS;
 		for(;nr_cpus_online < n_cpus_on_requested;nr_cpus_online++)
 			cpu_up(nr_cpus_online);
 	}
-	else {
-		for(nr_cpus_online--;nr_cpus_online > n_cpus_on_requested - 1;nr_cpus_online--)
+	else{
+		for(nr_cpus_online--;nr_cpus_online >= n_cpus_on_requested - 1;nr_cpus_online--)
 			cpu_down(nr_cpus_online);
 	}
 }
@@ -369,5 +342,3 @@ MODULE_DESCRIPTION("'sleepy_plug' - An intelligent cpu hotplug driver for "
 MODULE_LICENSE("GPL");
 
 late_initcall(sleepy_plug_init);
-
-
