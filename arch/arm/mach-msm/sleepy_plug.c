@@ -113,7 +113,6 @@ static enum mp_decisions mp_decision(void)
 			}
 		}
 	}
-}
 #ifdef DEBUG_SLEEPY_PLUG
 	pr_info("[SLEEPY] nr_cpu_online: %d|avg: %d\n",nr_cpu_online,avg);
 #endif
