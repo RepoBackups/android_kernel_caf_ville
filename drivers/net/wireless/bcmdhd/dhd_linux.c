@@ -2812,7 +2812,6 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 #endif /*  (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP) */
 
 #ifdef CONFIG_POWERSUSPEND
-	dhd->power_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 20;
 	dhd->power_suspend.suspend = dhd_power_suspend;
 	dhd->power_suspend.resume = dhd_late_resume;
 	register_power_suspend(&dhd->power_suspend);
