@@ -1034,6 +1034,14 @@ config TOUCHSCREEN_SYNAPTICS_3K_MX
 	help
 	  This enables support for Synaptics RMI4 over I2C based touchscreens.
 
+config TOUCHSCREEN_SYNAPTICS_REMOVE_FW_TIMEOUT
+	default n
+	depends on TOUCHSCREEN_SYNAPTICS_3K
+	bool "Disable Synaptics firmware condition read timeout"
+	help
+	  Say Y here if your Synaptics touchscreen is prone to
+	  failures when reading the firmware condition.
+
 config TOUCHSCREEN_CYPRESS_SWEEP2WAKE
         tristate "Sweep2Wake for Cypress CS touchscreens"
         depends on TOUCHSCREEN_CYPRESS_CS
