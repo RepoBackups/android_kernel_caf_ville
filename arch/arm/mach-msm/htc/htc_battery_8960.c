@@ -1008,8 +1008,9 @@ static void htc_batt_store_battery_ui_soc(int soc_ui)
 static void htc_batt_get_battery_ui_soc(int *soc_ui)
 {
 	int temp_soc;
+#if 0
 	int orig_soc = *soc_ui;
-
+#endif
 	if (htc_batt_info.igauge &&
 			htc_batt_info.igauge->get_battery_ui_soc) {
 		temp_soc = htc_batt_info.igauge->get_battery_ui_soc();
@@ -1018,10 +1019,10 @@ static void htc_batt_get_battery_ui_soc(int *soc_ui)
 		if (temp_soc > 0 && temp_soc <= 100)
 			*soc_ui = temp_soc;
 	}
-
+#if 0
 	BATT_LOG("%s: original soc: %d, changed soc: %d.", __func__,
 		orig_soc, *soc_ui);
-
+#endif
 	return;
 }
 
