@@ -564,6 +564,9 @@ static inline int kgsl_process_private_get(struct kgsl_process_private *process)
 
 void kgsl_process_private_put(struct kgsl_process_private *private);
 
+
+struct kgsl_process_private *kgsl_process_private_find(pid_t pid);
+
 /**
  * kgsl_context_cancel_events_timestamp - cancel events for a given timestamp
  * @device: Pointer to the KGSL device that owns the context
