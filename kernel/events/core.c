@@ -1228,6 +1228,28 @@ static int __perf_remove_from_context(void *info)
 	return 0;
 }
 
+#ifdef CONFIG_SMP
+static void perf_retry_remove(struct perf_event *event)
+{
+	int up_ret;
+	/*
+	 * CPU was offline. Bring it online so we can
+	 * gracefully exit a perf context.
+	 */
+	up_ret = cpu_up(event->cpu);
+	if (!up_ret)
+		/* Try the remove call once again. */
+		cpu_function_call(event->cpu, __perf_remove_from_context,
+				  event);
+	else
+		pr_err("Failed to bring up CPU: %d, ret: %d\n",
+		       event->cpu, up_ret);
+}
+#else
+static void perf_retry_remove(struct perf_event *event)
+{
+}
+#endif
 
 /*
  * Remove the event from a task's (or a CPU's) list of events.
@@ -1242,28 +1264,27 @@ static int __perf_remove_from_context(void *info)
  * When called from perf_event_exit_task, it's OK because the
  * context has been detached from its task.
  */
-static void perf_remove_from_context(struct perf_event *event, bool detach_group)
+static void __ref perf_remove_from_context(struct perf_event *event)
 {
 	struct perf_event_context *ctx = event->ctx;
 	struct task_struct *task = ctx->task;
-	struct remove_event re = {
-		.event = event,
-		.detach_group = detach_group,
-	};
+	int ret;
 
 	lockdep_assert_held(&ctx->mutex);
 
 	if (!task) {
 		/*
-		 * Per cpu events are removed via an smp call and
-		 * the removal is always successful.
+		 * Per cpu events are removed via an smp call
 		 */
-		cpu_function_call(event->cpu, __perf_remove_from_context, &re);
+		ret = cpu_function_call(event->cpu, __perf_remove_from_context,
+					event);
+		if (ret == -ENXIO)
+			perf_retry_remove(event);
 		return;
 	}
 
 retry:
-	if (!task_function_call(task, __perf_remove_from_context, &re))
+	if (!task_function_call(task, __perf_remove_from_context, event))
 		return;
 
 	raw_spin_lock_irq(&ctx->lock);
@@ -1280,8 +1301,6 @@ retry:
 	 * Since the task isn't running, its safe to remove the event, us
 	 * holding the ctx->lock ensures the task won't get scheduled in.
 	 */
-	if (detach_group)
-		perf_group_detach(event);
 	list_del_event(event, ctx);
 	raw_spin_unlock_irq(&ctx->lock);
 }
@@ -7183,11 +7202,20 @@ static void perf_event_exit_cpu_context(int cpu)
 
 	idx = srcu_read_lock(&pmus_srcu);
 	list_for_each_entry_rcu(pmu, &pmus, entry) {
-		ctx = &per_cpu_ptr(pmu->pmu_cpu_context, cpu)->ctx;
+		/*
+		 * If keeping events across hotplugging is supported, do not
+		 * remove the event list, but keep it alive across CPU hotplug.
+		 * The context is exited via an fd close path when userspace
+		 * is done and the target CPU is online.
+		 */
+		if (!pmu->events_across_hotplug) {
+			ctx = &per_cpu_ptr(pmu->pmu_cpu_context, cpu)->ctx;
 
-		mutex_lock(&ctx->mutex);
-		smp_call_function_single(cpu, __perf_event_exit_context, ctx, 1);
-		mutex_unlock(&ctx->mutex);
+			mutex_lock(&ctx->mutex);
+			smp_call_function_single(cpu, __perf_event_exit_context,
+						 ctx, 1);
+			mutex_unlock(&ctx->mutex);
+		}
 	}
 	srcu_read_unlock(&pmus_srcu, idx);
 }
