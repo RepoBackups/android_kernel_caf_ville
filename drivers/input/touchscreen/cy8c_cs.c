@@ -1051,12 +1051,9 @@ static int cy8c_cs_probe(struct i2c_client *client,
 	if (client->irq && cs->use_irq) {
 		ret = request_irq(client->irq, cy8c_cs_irq_handler,
 #if defined (CONFIG_BLN) || defined(CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
-				  IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_NO_SUSPEND
-#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-				| IRQF_IRQPOLL
-#endif
+				  IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_NO_SUSPEND
 #else
-				  IRQF_TRIGGER_FALLING
+				  IRQF_TRIGGER_LOW
 #endif
 				  ,cs->id.chipid == CS_CHIPID ? CYPRESS_SS_NAME : CYPRESS_CS_NAME,
 				  cs);
