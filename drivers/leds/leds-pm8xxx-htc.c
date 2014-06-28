@@ -88,7 +88,7 @@ static int current_blink = 0;
 static int lut_coefficient = 100;
 static int dutys_array[64];
 #ifdef CONFIG_BLN
-static int bln = 1; 
+int bln = 1; 
 #endif
 u8 pm8xxxx_led_pwm_mode(int flag)
 {
