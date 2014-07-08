@@ -33,10 +33,11 @@
 #undef DEBUG_SLEEPY_PLUG
 
 #define SLEEPY_PLUG_MAJOR_VERSION	2
-#define SLEEPY_PLUG_MINOR_VERSION	3
+#define SLEEPY_PLUG_MINOR_VERSION	4
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
+#define MIN_SAMPLING_MS			(250)
 
 #define PEAK_THRESHOLD			30
 
@@ -47,6 +48,7 @@ static DEFINE_MUTEX(sleepy_plug_mutex);
 struct delayed_work sleepy_plug_work;
 
 static struct workqueue_struct *sleepy_plug_wq;
+static cputime64_t last_time;
 
 enum mp_decisions {
 	DO_NOTHING = 0,
@@ -141,8 +143,14 @@ static void __cpuinit sleepy_plug_work_fn(struct work_struct *work)
 	pr_info("decision: %d\n",decision);
 #endif
 	if (!suspended) {
-		sampling_time = DEF_SAMPLING_MS;
-		set_cpus(mp_decision());
+		cputime64_t this_time = ktime_to_ms(ktime_get());
+		if(this_time - last_time >= MIN_SAMPLING_MS) {
+			sampling_time = DEF_SAMPLING_MS;
+			set_cpus(mp_decision());
+			last_time = this_time;
+		}
+		else
+			return;
 	}
 #ifdef DEBUG_SLEEPY_PLUG
 	else
@@ -331,6 +339,8 @@ int __init sleepy_plug_init(void)
 	INIT_DELAYED_WORK(&sleepy_plug_work, sleepy_plug_work_fn);
 	queue_delayed_work_on(0, sleepy_plug_wq, &sleepy_plug_work,
 		msecs_to_jiffies(10));
+
+	last_time = ktime_to_ms(ktime_get());
 
 	return 0;
 }
