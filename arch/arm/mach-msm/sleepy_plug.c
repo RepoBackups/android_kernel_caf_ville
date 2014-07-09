@@ -29,15 +29,20 @@
 #include <linux/powersuspend.h>
 #endif
 
+extern unsigned int report_load_at_max_freq(void);
+
 //#define DEBUG_SLEEPY_PLUG
 #undef DEBUG_SLEEPY_PLUG
 
-#define SLEEPY_PLUG_MAJOR_VERSION	2
-#define SLEEPY_PLUG_MINOR_VERSION	4
+#define SLEEPY_PLUG_MAJOR_VERSION	3
+#define SLEEPY_PLUG_MINOR_VERSION	0
 
 #define DEF_SAMPLING_MS			(1000)
 #define BUSY_SAMPLING_MS		(500)
 #define MIN_SAMPLING_MS			(250)
+
+#define CPU_LOAD_THRESHOLD		90
+#define CPU_OVER_LOAD_THRESHOLD	2500
 
 #define PEAK_THRESHOLD			30
 
@@ -48,7 +53,8 @@ static DEFINE_MUTEX(sleepy_plug_mutex);
 struct delayed_work sleepy_plug_work;
 
 static struct workqueue_struct *sleepy_plug_wq;
-static cputime64_t last_time;
+static cputime64_t last_time, last_cpu_time_over_th;
+static long total_cpu_time_over_th;
 
 enum mp_decisions {
 	DO_NOTHING = 0,
@@ -113,6 +119,21 @@ static enum mp_decisions mp_decision(void)
 					decision = i;
 				break;
 			}
+		}
+
+		if(decision == DO_NOTHING && nr_cpu_online != CONFIG_NR_CPUS && report_load_at_max_freq() > CPU_LOAD_THRESHOLD) {
+			cputime64_t this_time = ktime_to_ms(ktime_get());
+			if(last_cpu_time_over_th > 0) {
+				total_cpu_time_over_th += this_time - last_cpu_time_over_th;
+			}
+			if(total_cpu_time_over_th > CPU_OVER_LOAD_THRESHOLD) {
+				decision = nr_cpu_online + 1;
+			}
+
+			last_cpu_time_over_th = this_time;
+		}
+		else {
+			last_cpu_time_over_th = total_cpu_time_over_th = 0;
 		}
 	}
 #ifdef DEBUG_SLEEPY_PLUG
@@ -337,11 +358,12 @@ int __init sleepy_plug_init(void)
 
 	sleepyplug_sysfs_init();
 
+	last_time = last_cpu_time_over_th = ktime_to_ms(ktime_get());
+	total_cpu_time_over_th = 0;
+
 	INIT_DELAYED_WORK(&sleepy_plug_work, sleepy_plug_work_fn);
 	queue_delayed_work_on(0, sleepy_plug_wq, &sleepy_plug_work,
 		msecs_to_jiffies(10));
-
-	last_time = ktime_to_ms(ktime_get());
 
 	return 0;
 }
