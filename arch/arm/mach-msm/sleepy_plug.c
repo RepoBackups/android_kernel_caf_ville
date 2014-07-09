@@ -199,6 +199,7 @@ static struct power_suspend sleepy_plug_power_suspend_driver = {
 static void sleepy_plug_input_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
+	if(ktime_to_ms(ktime_get()) - last_time >= MIN_SAMPLING_MS)
         queue_delayed_work_on(0, sleepy_plug_wq, &sleepy_plug_work,
                 msecs_to_jiffies(10));
 }
