@@ -491,7 +491,6 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 
 	if(!kcal_ctrl_pdata->set_values || !kcal_ctrl_pdata->get_values ||
 					!kcal_ctrl_pdata->refresh_display) {
-		//pr_err("kcal function not registered\n");
 		return -1;
 	}
 
@@ -538,11 +537,8 @@ static struct platform_driver this_driver = {
 	},
 };
 
-typedef int (*funcPtr)(void);
-
 static void msm_kcal_power_suspend(struct power_suspend *handler)
 {
-
 }
 
 static void msm_kcal_late_resume(struct power_suspend *handler)
@@ -558,21 +554,6 @@ static struct power_suspend msm_kcal_power_suspend_struct_driver = {
 
 int __init kcal_ctrl_init(void)
 {
-#if 0
-	struct kcal_platform_data *kcalPtr;
-
-	addr = kallsyms_lookup_name("klcd_pdata");
-	kcalPtr = (struct kcal_platform_data *)addr;
-	kcalPtr->set_values = kcal_set_values;
-	kcalPtr->get_values = kcal_get_values;
-	kcalPtr->refresh_display = kcal_refresh_values;
-
-#endif
-	unsigned int addr;
-
-	addr =  kallsyms_lookup_name("update_preset_lcdc_lut");
-	//*(funcPtr *)addr = (funcPtr)update_lcdc_lut;
-
 	platform_add_devices(msm_panel_devices,
 		ARRAY_SIZE(msm_panel_devices));
 
