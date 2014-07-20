@@ -571,7 +571,7 @@ static int mdp_lut_hw_update(struct fb_cmap *cmap)
 	return 0;
 }
 
-static int mdp_lut_push;
+static int mdp_lut_push = 1;
 static int mdp_lut_push_i;
 static int mdp_lut_resume_needed;
 
@@ -645,10 +645,24 @@ static int mdp_lut_update_lcdc(struct fb_info *info, struct fb_cmap *cmap)
 	return 0;
 }
 
+static void mdp_lut_enable(void)
+{
+	uint32_t out;
+	unsigned long flags;
+
+	if (mdp_lut_push) {
+		spin_lock_irqsave(&mdp_lut_push_lock, flags);
+		mdp_lut_push = 0;
+		out = inpdw(MDP_BASE + 0x90070) & ~((0x1 << 10) | 0x7);
+		MDP_OUTP(MDP_BASE + 0x90070,
+				(mdp_lut_push_i << 10) | 0x7 | out);
+		spin_unlock_irqrestore(&mdp_lut_push_lock, flags);
+	}
+}
+
 #ifdef CONFIG_UPDATE_LCDC_LUT
 int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 {
-	uint32_t out;
 	int i;
 	u16 r, g, b;
 
@@ -675,9 +689,7 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 			(0x400*mdp_lut_i) + cmap->start*4 + i*4, last_lut[i]);
 	}
 
-	/*mask off non LUT select bits*/
-	out = inpdw(MDP_BASE + 0x90070);
-	MDP_OUTP(MDP_BASE + 0x90070, (mdp_lut_i << 10) | 0x7 | out);
+	mdp_lut_enable();
 	mdp_clk_ctrl(0);
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	mdp_lut_i = (mdp_lut_i + 1)%2;
@@ -685,21 +697,6 @@ int mdp_preset_lut_update_lcdc(struct fb_cmap *cmap, uint32_t *internal_lut)
 	return 0;
 }
 #endif
-
-static void mdp_lut_enable(void)
-{
-	uint32_t out;
-	unsigned long flags;
-
-	if (mdp_lut_push) {
-		spin_lock_irqsave(&mdp_lut_push_lock, flags);
-		mdp_lut_push = 0;
-		out = inpdw(MDP_BASE + 0x90070) & ~((0x1 << 10) | 0x7);
-		MDP_OUTP(MDP_BASE + 0x90070,
-				(mdp_lut_push_i << 10) | 0x7 | out);
-		spin_unlock_irqrestore(&mdp_lut_push_lock, flags);
-	}
-}
 
 #define MDP_REV42_HIST_MAX_BIN 128
 #define MDP_REV41_HIST_MAX_BIN 32
@@ -2422,7 +2419,7 @@ static int mdp_on(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd;
-	//int i;
+	int i;
 	mfd = platform_get_drvdata(pdev);
 
 	pr_debug("%s:+\n", __func__);
@@ -2442,20 +2439,17 @@ static int mdp_on(struct platform_device *pdev)
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 
 	ret = panel_next_on(pdev);
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-
 
 	if (mdp_rev >= MDP_REV_40) {
-		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		mdp_clk_ctrl(1);
 		mdp_bus_scale_restore_request();
 		mdp4_hw_init();
 
 		/* Initialize HistLUT to last LUT */
-		/*for (i = 0; i < MDP_HIST_LUT_SIZE; i++) {
+		for (i = 0; i < MDP_HIST_LUT_SIZE; i++) {
 			MDP_OUTP(MDP_BASE + 0x94800 + i*4, last_lut[i]);
 			MDP_OUTP(MDP_BASE + 0x94C00 + i*4, last_lut[i]);
-		}*/
+		}
 
 		mdp_lut_status_restore();
 		outpdw(MDP_BASE + 0x0038, mdp4_display_intf);
@@ -2472,8 +2466,8 @@ static int mdp_on(struct platform_device *pdev)
 
 		mdp_clk_ctrl(0);
 		mdp4_overlay_reset();
-		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	}
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
 	if (mdp_rev == MDP_REV_303 && mfd->panel.type == MIPI_CMD_PANEL) {
 
@@ -3493,7 +3487,9 @@ static int __init mdp_driver_init(void)
 #if defined(CONFIG_DEBUG_FS)
 	mdp_debugfs_init();
 #endif
-
+#ifdef CONFIG_UPDATE_LCDC_LUT
+	mdp_lut_enable();
+#endif
 	return 0;
 
 }
