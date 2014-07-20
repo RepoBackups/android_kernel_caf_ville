@@ -424,8 +424,10 @@ static ssize_t kcal_store(struct device *dev, struct device_attribute *attr,
 	sscanf(buf, "%d %d %d %d", &kcal_r, &kcal_g, &kcal_b, &chksum);
 	chksum = (chksum & 0x0000ff00) >> 8;
 
-	if (calc_checksum(kcal_r, kcal_g, kcal_b, chksum))
+	if (calc_checksum(kcal_r, kcal_g, kcal_b, chksum)) {
 		kcal_ctrl_pdata->set_values(kcal_r, kcal_g, kcal_b);
+		kcal_ctrl_pdata->refresh_display();
+	}
 	return count;
 }
 
