@@ -1048,8 +1048,3 @@ config TOUCHSCREEN_SYNAPTICS_REMOVE_FW_TIMEOUT
 	  failures when reading the firmware condition.
 
 endif
-
-config TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-        tristate "Sweep2Wake for Cypress CS touchscreens"
-        depends on TOUCHSCREEN_CYPRESS_CS
-        default n
