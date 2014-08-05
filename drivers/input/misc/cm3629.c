@@ -69,8 +69,6 @@ static int avg_min_adc = 0;
 static int p_status;
 static int p_irq_status;
 static int prev_correction;
-static int ps_near;
-static int pocket_mode_flag;
 static int phone_status;
 static int oncall = 0;
 static uint8_t sensor_chipId[3] = {0};
@@ -725,7 +723,7 @@ static int lightsensor_disable(struct cm3629_info *lpi);
 static void sensor_irq_do_work(struct work_struct *work)
 {
 	struct cm3629_info *lpi = lp_info;
-	uint8_t cmd[3] = {0,0,0};
+	uint8_t cmd[3];
 	uint8_t add = 0;
 	
 	_cm3629_I2C_Read2(lpi->cm3629_slave_address, INT_FLAG, cmd, 2);
@@ -2476,23 +2474,6 @@ err_unregister_ps_input_device:
 err_free_ps_input_device:
 	input_free_device(lpi->ps_input_dev);
 	return ret;
-}
-
-int power_key_check_in_pocket_no_light(void)
-{
-	struct cm3629_info *lpi = lp_info;
-
-	if(plsensor_chip_state) /*pl-sensor no ack */
-		return 0;
-
-	pocket_mode_flag = 1;
-
-	psensor_enable(lpi);
-	psensor_disable(lpi);
-
-	pocket_mode_flag = 0;
-
-	return ps_near;
 }
 
 static int cm3629_read_chip_id(struct cm3629_info *lpi)

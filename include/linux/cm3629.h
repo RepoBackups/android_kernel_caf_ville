@@ -191,5 +191,4 @@ struct cm3629_platform_data {
 	uint16_t w_golden_adc;
 };
 
-int power_key_check_in_pocket_no_light(void);
 #endif
