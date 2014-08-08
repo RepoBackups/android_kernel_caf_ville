@@ -74,7 +74,6 @@ extern uint8_t touchscreen_is_on(void) {
 }
 #endif
 
-
 int i2c_cy8c_read(struct i2c_client *client, uint8_t addr, uint8_t *data, uint8_t length)
 {
 	int retry;
