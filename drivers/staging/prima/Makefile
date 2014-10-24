@@ -1,5 +1,7 @@
 MODNAME := prima_wlan
-EXTRA_CFLAGS += -Os
+
+CFLAGS_prima_wlan.o += -Os
+
 #Do we panic on bug?  default is to warn
 PANIC_ON_BUG := 0
 

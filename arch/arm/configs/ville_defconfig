@@ -2312,7 +2312,8 @@ CONFIG_RADIO_ADAPTERS=y
 # Texas Instruments WL128x FM driver (ST based)
 #
 # CONFIG_RADIO_WL128X is not set
-# CONFIG_RADIO_IRIS is not set
+CONFIG_RADIO_IRIS=y
+CONFIG_RADIO_IRIS_TRANSPORT=y
 
 #
 # Graphics support
@@ -3062,13 +3063,16 @@ CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES=y
 #
 CONFIG_PRIMA_WLAN=y
 # CONFIG_PRIMA_WLAN_BTAMP is not set
+CONFIG_PRIMA_WLAN_LFR=y
+CONFIG_PRIMA_WLAN_OKC=y
+# CONFIG_PRIMA_WLAN_11AC_HIGH_TP is not set
+# CONFIG_QCOM_VOWIFI_11R is not set
+# CONFIG_QCOM_TDLS is not set
 
 #
 # Qualcomm Atheros Prima WLAN module
 #
 # CONFIG_PRIMA_WLAN_3x is not set
-# CONFIG_PRIMA_WLAN_LFR is not set
-# CONFIG_PRIMA_WLAN_OKC is not set
 
 #
 # Qualcomm MSM specific device drivers
