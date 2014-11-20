@@ -49,14 +49,10 @@ static unsigned char c_byt_pair_index;
 static char utf_8_flag;
 static char rt_ert_flag;
 static char formatting_dir;
-static unsigned char sig_blend = CTRL_ON;
 static DEFINE_MUTEX(iris_fm);
 
 module_param(rds_buf, uint, 0);
 MODULE_PARM_DESC(rds_buf, "RDS buffer entries: *100*");
-
-module_param(sig_blend, byte, S_IWUSR | S_IRUGO);
-MODULE_PARM_DESC(sig_blend, "signal blending switch: 0:OFF 1:ON");
 
 static void radio_hci_cmd_task(unsigned long arg);
 static void radio_hci_rx_task(unsigned long arg);
@@ -4157,93 +4153,6 @@ static int iris_vidioc_querycap(struct file *file, void *priv,
 	return 0;
 }
 
-<<<<<<< HEAD
-=======
-static int initialise_recv(struct iris_device *radio)
-{
-	int retval;
-
-	if (unlikely(radio == NULL)) {
-		FMDERR(":radio is null");
-		return -EINVAL;
-	}
-
-	radio->mute_mode.soft_mute = CTRL_ON;
-	retval = hci_set_fm_mute_mode(&radio->mute_mode,
-					radio->fm_hdev);
-
-	if (retval < 0) {
-		FMDERR("Failed to enable Smute\n");
-		return retval;
-	}
-
-	radio->stereo_mode.stereo_mode = CTRL_OFF;
-	radio->stereo_mode.sig_blend = sig_blend;
-	radio->stereo_mode.intf_blend = CTRL_ON;
-	radio->stereo_mode.most_switch = CTRL_ON;
-	retval = hci_set_fm_stereo_mode(&radio->stereo_mode,
-						radio->fm_hdev);
-
-	if (retval < 0) {
-		FMDERR("Failed to set stereo mode\n");
-		return retval;
-	}
-
-	radio->event_mask = SIG_LEVEL_INTR | RDS_SYNC_INTR | AUDIO_CTRL_INTR;
-	retval = hci_conf_event_mask(&radio->event_mask, radio->fm_hdev);
-	if (retval < 0) {
-		FMDERR("Enable Async events failed");
-		return retval;
-	}
-
-	retval = hci_cmd(HCI_FM_GET_RECV_CONF_CMD, radio->fm_hdev);
-	if (retval < 0)
-		FMDERR("Failed to get the Recv Config\n");
-	return retval;
-}
-
-static int initialise_trans(struct iris_device *radio)
-{
-
-	int retval;
-
-	if (unlikely(radio == NULL)) {
-		FMDERR(":radio is null");
-		return -EINVAL;
-	}
-
-	retval = hci_cmd(HCI_FM_GET_TX_CONFIG, radio->fm_hdev);
-	if (retval < 0)
-		FMDERR("get frequency failed %d\n", retval);
-
-	return retval;
-}
-
-static int is_enable_rx_possible(struct iris_device *radio)
-{
-	int retval = 1;
-
-	if (unlikely(radio == NULL)) {
-		FMDERR(":radio is null");
-		return -EINVAL;
-	}
-
-	if (radio->mode == FM_OFF || radio->mode == FM_RECV)
-		retval = 0;
-
-	return retval;
-}
-
-static int is_enable_tx_possible(struct iris_device *radio)
-{
-	int retval = 1;
-
-	if (radio->mode == FM_OFF || radio->mode == FM_TRANS)
-		retval = 0;
-
-	return retval;
-}
->>>>>>> edc330a... radio: iris: Add the parameter to turn on/off sig blend
 
 static const struct v4l2_ioctl_ops iris_ioctl_ops = {
 	.vidioc_querycap              = iris_vidioc_querycap,
@@ -4261,28 +4170,10 @@ static const struct v4l2_ioctl_ops iris_ioctl_ops = {
 	.vidioc_g_ext_ctrls           = iris_vidioc_g_ext_ctrls,
 };
 
-static int is_initialized = 0;
-static int video_open(struct file *file)
-{
-	int retval;
-
-	if (!is_initialized) {
-		retval = hci_fm_smd_register();
-		if (retval) {
-			FMDERR(": hci_fm_smd_register failed\n");
-			return retval;
-		}
-		is_initialized = 1;
-	}
-
-	return 0;
-}
-
 static const struct v4l2_file_operations iris_fops = {
 	.owner = THIS_MODULE,
 	.unlocked_ioctl = video_ioctl2,
 	.release        = iris_fops_release,
-	.open           = video_open,
 };
 
 static struct video_device iris_viddev_template = {
