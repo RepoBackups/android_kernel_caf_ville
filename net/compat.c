@@ -94,11 +94,7 @@ int verify_compat_iovec(struct msghdr *kern_msg, struct iovec *kern_iov,
 				return err;
 		}
 		kern_msg->msg_name = kern_address;
-<<<<<<< HEAD
-	} else
-=======
 	} else {
->>>>>>> 5abf308... Squashed update of kernel from 3.4.102 to 3.4.103
 		kern_msg->msg_name = NULL;
 		kern_msg->msg_namelen = 0;
 	}
