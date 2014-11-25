@@ -860,8 +860,10 @@ void csrRoamSubstateChange( tpAniSirGlobal pMac, eCsrRoamSubState NewSubstate, t
     if(pMac->roam.curSubState[sessionId] == NewSubstate)
     {
        return;
-                }
-    pMac->roam.curSubState[sessionId] = NewSubstate;
+    }
+
+    if ((sessionId) < (sizeof(pMac->roam.curSubState) / sizeof(int)))
+       pMac->roam.curSubState[sessionId] = NewSubstate;
 }
 
 eCsrRoamState csrRoamStateChange( tpAniSirGlobal pMac, eCsrRoamState NewRoamState, tANI_U8 sessionId)
