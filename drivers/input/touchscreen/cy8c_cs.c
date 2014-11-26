@@ -961,7 +961,9 @@ static void report_key_func(struct cy8c_cs_data *cs, uint8_t vk)
 		else if (cs->btn_count == 1)
 			btn_state = 0; // single button
 		if (dt2w_switch > 0)
-            dt2w_func(btn_state, btn_id, trigger_time);
+            dt2w_func(btn_state, btn_id, trigger_time);  
+            	if (dt2s_switch > 0)
+            dt2s_func(btn_state, btn_id, trigger_time);
 		if (s2w_switch > 0)
 			do_sweep2wake(btn_state, btn_id, trigger_time);
 	}
