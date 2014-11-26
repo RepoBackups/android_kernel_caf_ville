@@ -100,6 +100,7 @@ extern uint8_t touchscreen_is_on(void) {
 int pocket_detect = 1; 
 int s2w_switch = 1;
 int dt2w_switch = 2;
+int dt2s_switch = 2;
 int s2w_h[2][3] = {{0, 0, 0}, {0, 0, 0}};
 cputime64_t s2w_t[3] = {0, 0, 0};
 cputime64_t dt2w_time[2] = {0, 0}; 
@@ -211,6 +212,36 @@ static void dt2w_func(int btn_state, int btn_id, cputime64_t dtrigger_time) {
         return;
 }
 
+static void dt2s_func(int btn_state, int btn_id, cputime64_t dtrigger_time) {
+
+	int dt2s_button;	
+
+	if (btn_state != 0)
+		return;	
+
+	if (dt2s_switch == 3) {
+		dt2s_button = 4;
+	} else {
+		dt2s_button = dt2s_switch;
+	}
+
+	if (btn_id != dt2s_button)
+		return;
+
+        dt2w_time[1] = dt2w_time[0];
+        dt2w_time[0] = dtrigger_time;
+#if DEBUG
+        printk(KERN_INFO"[DT2W]: inside the function\n");
+#endif
+        if (scr_suspended == true && ((dt2w_time[0]-dt2w_time[1]) > DT2W_TIMEOUT_MIN) && ((dt2w_time[0]-dt2w_time[1]) < DT2W_TIMEOUT_MAX)) {
+#if DEBUG
+               printk(KERN_INFO"[DT2W]: OFF->ON\n");
+#endif
+               sweep2wake_pwrtrigger();
+	}
+
+        return;
+}
 
 static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
 
@@ -642,6 +673,30 @@ static ssize_t cy8c_dt2wake_dump(struct device *dev,
 
 static DEVICE_ATTR(doubletap2wake, (S_IWUSR|S_IRUGO),
 	cy8c_dt2wake_show, cy8c_dt2wake_dump);
+
+static ssize_t cy8c_dt2sleep_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+
+	count += sprintf(buf, "%d\n", dt2s_switch);
+
+	return count;
+}
+
+static ssize_t cy8c_dt2sleep_dump(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (buf[0] >= '0' && buf[0] <= '3' && buf[1] == '\n')
+		if (dt2s_switch != buf[0] - '0')
+			dt2s_switch = buf[0] - '0';
+
+	return count;
+}
+
+static DEVICE_ATTR(doubletap2sleep, (S_IWUSR|S_IRUGO),
+	cy8c_dt2sleep_show, cy8c_dt2sleep_dump);
+
 #endif
 
 static struct kobject *android_touchkey_kobj;
@@ -662,6 +717,11 @@ static int cy8c_touchkey_sysfs_init(void)
 		return ret;
 	}
 	ret = sysfs_create_file(android_touchkey_kobj, &dev_attr_doubletap2wake.attr);
+	if (ret) {
+		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
+		return ret;
+	}
+	ret = sysfs_create_file(android_touchkey_kobj, &dev_attr_doubletap2sleep.attr);
 	if (ret) {
 		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
 		return ret;
@@ -720,6 +780,7 @@ static void cy8c_touchkey_sysfs_deinit(void)
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_sweep2wake.attr);
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_doubletap2wake.attr);
+	sysfs_remove_file(android_touchkey_kobj, &dev_attr_doubletap2sleep.attr);
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_pocket_detect.attr);
 #endif
 	sysfs_remove_file(android_touchkey_kobj, &dev_attr_gpio.attr);
