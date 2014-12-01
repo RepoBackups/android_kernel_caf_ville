@@ -2238,7 +2238,7 @@ unsigned long avg_cpu_nr_running(unsigned int cpu)
 
 	return ave_nr_running;
 }
-EXPORT_SYMBOL(avg_cpu_nr_running)
+EXPORT_SYMBOL(avg_cpu_nr_running);
 #endif
 
 /*
