@@ -1060,6 +1060,17 @@ config TOUCHSCREEN_CYPRESS_SWEEP2WAKE
         depends on TOUCHSCREEN_CYPRESS_CS
         default n
 
+config TOUCHSCREEN_KNOCKON
+	tristate "KnockOn for touchscreens"
+ 	select TOUCHSCREEN_PREVENT_SLEEP
+ 	default n
+
+config TOUCHSCREEN_PREVENT_SLEEP
+	bool "Inihibit sleep on modified touchscreen drivers"
+	default n
+	help
+	This disables the sleep function of modified touchscreen drivers.
+
 config TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 	depends on TOUCHSCREEN_SYNAPTICS_3K || TOUCHSCREEN_SYNAPTICS_3K_MX
         tristate "Sweep2Wake for SYNAPTICS_3k based touchscreens"
