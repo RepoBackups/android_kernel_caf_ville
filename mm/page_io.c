@@ -18,11 +18,8 @@
 #include <linux/bio.h>
 #include <linux/swapops.h>
 #include <linux/writeback.h>
-<<<<<<< HEAD
 #include <linux/ratelimit.h>
-=======
 #include <linux/frontswap.h>
->>>>>>> e4473a3... mm: frontswap: core swap subsystem hooks and headers
 #include <asm/pgtable.h>
 
 /*

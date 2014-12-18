@@ -31,12 +31,9 @@
 #include <linux/memcontrol.h>
 #include <linux/poll.h>
 #include <linux/oom.h>
-<<<<<<< HEAD
 #include <linux/export.h>
-=======
 #include <linux/frontswap.h>
 #include <linux/swapfile.h>
->>>>>>> e4473a3... mm: frontswap: core swap subsystem hooks and headers
 
 #include <asm/pgtable.h>
 #include <asm/tlbflush.h>
@@ -1734,11 +1731,8 @@ SYSCALL_DEFINE1(swapoff, const char __user *, specialfile)
 	swap_map = p->swap_map;
 	p->swap_map = NULL;
 	p->flags = 0;
-<<<<<<< HEAD
 	spin_unlock(&p->lock);
-=======
 	frontswap_invalidate_area(type);
->>>>>>> e4473a3... mm: frontswap: core swap subsystem hooks and headers
 	spin_unlock(&swap_lock);
 	mutex_unlock(&swapon_mutex);
 	vfree(swap_map);
