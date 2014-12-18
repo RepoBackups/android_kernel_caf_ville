@@ -2872,21 +2872,31 @@ static struct platform_device msm_tsens_device = {
 };
 
 static struct msm_thermal_data msm_thermal_pdata = {
-        .sensor_id = 0,
-        .poll_ms = 150,
-        .shutdown_temp = 75,
-
-        .allowed_max_high = 74,
-        .allowed_max_low = 70,
-        .allowed_max_freq = 384000,
-
-        .allowed_mid_high = 69,
-        .allowed_mid_low = 61,
-        .allowed_mid_freq = 810000,
-
-        .allowed_low_high = 60,
-        .allowed_low_low = 55,
-        .allowed_low_freq = 1350000,
+	.sensor_id = 0,
+#ifdef CONFIG_INTELLI_THERMAL
+        .poll_ms = 250,
+#ifdef CONFIG_CPU_OVERCLOCK
+        .limit_temp_degC = 70,
+#else
+        .limit_temp_degC = 60,
+#endif
+        .temp_hysteresis_degC = 10,
+        .freq_step = 2,
+        .freq_control_mask = 0xf,
+        .core_limit_temp_degC = 80,
+        .core_temp_hysteresis_degC = 10,
+        .core_control_mask = 0xe,
+#else
+	.poll_ms = 1000,
+#ifdef CONFIG_CPU_OVERCLOCK
+	.limit_temp_degC = 70,
+#else
+	.limit_temp_degC = 60,
+#endif
+	.temp_hysteresis_degC = 10,
+//	.limit_freq = 918000,
+	.freq_step = 2,
+#endif
 };
 
 #ifdef CONFIG_MSM_FAKE_BATTERY
