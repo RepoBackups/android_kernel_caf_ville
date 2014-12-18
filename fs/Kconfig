@@ -283,4 +283,10 @@ source "fs/dlm/Kconfig"
 config ASYNC_FSYNC
 	bool "asynchronous fsync"
 	default y
+
+config EXFAT_FS
+	bool "Exfat file system support"
+	default n
+	select NLS_UTF8
+
 endmenu
