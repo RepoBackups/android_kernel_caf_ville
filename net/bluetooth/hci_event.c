@@ -60,7 +60,7 @@ static void hci_cc_inquiry_cancel(struct hci_dev *hdev, struct sk_buff *skb)
 
 	hci_req_complete(hdev, HCI_OP_INQUIRY_CANCEL, status);
 
-	hci_conn_check_pending(hdev);
+v	hci_conn_check_pending(hdev);
 }
 
 static void hci_cc_exit_periodic_inq(struct hci_dev *hdev, struct sk_buff *skb)
@@ -3336,6 +3336,17 @@ static inline void hci_le_ltk_request_evt(struct hci_dev *hdev,
 	conn->pin_length = ltk->pin_len;
 
 	hci_send_cmd(hdev, HCI_OP_LE_LTK_REPLY, sizeof(cp), &cp);
+
+	/* Ref. Bluetooth Core SPEC pages 1975 and 2004. STK is a
+	 * temporary key used to encrypt a connection following
+	 * pairing. It is used during the Encrypted Session Setup to
+	 * distribute the keys. Later, security can be re-established
+	 * using a distributed LTK.
+	 */
+	if (ltk->type == HCI_SMP_STK_SLAVE) {
+		list_del(&ltk->list);
+		kfree(ltk);
+	}
 
 	hci_dev_unlock(hdev);
 
