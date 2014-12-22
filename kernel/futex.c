@@ -736,14 +736,13 @@ lookup_pi_state(u32 uval, struct futex_hash_bucket *hb,
 		out_state:
 			atomic_inc(&pi_state->refcount);
 			*ps = pi_state;
-
 			return 0;
 		}
 	}
 
 	/*
 	 * We are the first waiter - try to look up the real owner and attach
-	 * the new pi_state to it, but bail out when TID = 0
+	 * the new pi_state to it, but bail out when TID = 0 [1]
 	 */
 	if (!pid)
 		return -ESRCH;
@@ -1502,7 +1501,7 @@ retry_private:
 			 * rereading and handing potential crap to
 			 * lookup_pi_state.
 			 */
-			ret = lookup_pi_state(ret, hb2, &key2, &pi_state, NULL);
+			ret = lookup_pi_state(ret, hb2, &key2, &pi_state);
 		}
 
 		switch (ret) {
