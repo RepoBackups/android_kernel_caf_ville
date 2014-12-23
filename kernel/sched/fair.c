@@ -2149,11 +2149,7 @@ static void hrtick_start_fair(struct rq *rq, struct task_struct *p)
 
 	WARN_ON(task_rq(p) != rq);
 
-<<<<<<< HEAD
-	if (rq->cfs.h_nr_running > 1) {
-=======
 	if (cfs_rq->h_nr_running > 1) {
->>>>>>> ecf641a... sched: Fix SCHED_HRTICK bug leading to late preemption of tasks
 		u64 slice = sched_slice(cfs_rq, se);
 		u64 ran = se->sum_exec_runtime - se->prev_sum_exec_runtime;
 		s64 delta = slice - ran;
