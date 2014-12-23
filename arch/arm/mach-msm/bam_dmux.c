@@ -270,10 +270,7 @@ static int need_delayed_ul_vote;
 static int power_management_only_mode;
 static int in_ssr;
 static int ssr_skipped_disconnect;
-<<<<<<< HEAD
 static struct completion shutdown_completion;
-=======
->>>>>>> 9f165c1... msm: bam_dmux: reset bam hardware when A2 goes into pc
 
 struct outside_notify_func {
 	void (*notify)(void *, int, unsigned long);
@@ -1779,22 +1776,13 @@ static void reconnect_to_bam(void)
 	if (!power_management_only_mode) {
 		if (ssr_skipped_disconnect) {
 			/* delayed to here to prevent bus stall */
-<<<<<<< HEAD
 			bam_ops->sps_disconnect_ptr(bam_tx_pipe);
 			bam_ops->sps_disconnect_ptr(bam_rx_pipe);
-=======
-			sps_disconnect(bam_tx_pipe);
-			sps_disconnect(bam_rx_pipe);
->>>>>>> 9f165c1... msm: bam_dmux: reset bam hardware when A2 goes into pc
 			__memzero(rx_desc_mem_buf.base, rx_desc_mem_buf.size);
 			__memzero(tx_desc_mem_buf.base, tx_desc_mem_buf.size);
 		}
 		ssr_skipped_disconnect = 0;
-<<<<<<< HEAD
 		i = bam_ops->sps_device_reset_ptr(a2_device_handle);
-=======
-		i = sps_device_reset(a2_device_handle);
->>>>>>> 9f165c1... msm: bam_dmux: reset bam hardware when A2 goes into pc
 		if (i)
 			pr_err("%s: device reset failed rc = %d\n", __func__,
 									i);
@@ -1865,20 +1853,14 @@ static void disconnect_to_bam(void)
 	/* in_ssr documentation/assumptions found in restart_notifier_cb */
 	if (!power_management_only_mode) {
 		if (likely(!in_ssr)) {
-<<<<<<< HEAD
 			BAM_DMUX_LOG("%s: disconnect tx\n", __func__);
 			bam_ops->sps_disconnect_ptr(bam_tx_pipe);
 			BAM_DMUX_LOG("%s: disconnect rx\n", __func__);
 			bam_ops->sps_disconnect_ptr(bam_rx_pipe);
 			__memzero(rx_desc_mem_buf.base, rx_desc_mem_buf.size);
 			__memzero(tx_desc_mem_buf.base, tx_desc_mem_buf.size);
-=======
-			sps_disconnect(bam_tx_pipe);
-			sps_disconnect(bam_rx_pipe);
-			__memzero(rx_desc_mem_buf.base, rx_desc_mem_buf.size);
-			__memzero(tx_desc_mem_buf.base, tx_desc_mem_buf.size);
+			bam_opx->sps_disconnect(bam_rx_pipe);
 			sps_device_reset(a2_device_handle);
->>>>>>> 9f165c1... msm: bam_dmux: reset bam hardware when A2 goes into pc
 		} else {
 			ssr_skipped_disconnect = 1;
 		}
@@ -2005,7 +1987,6 @@ static int restart_notifier_cb(struct notifier_block *this,
 	 * processing.  We do not wat to access the bam hardware during SSR
 	 * because a watchdog crash from a bus stall would likely occur.
 	 */
-<<<<<<< HEAD
 	if (code == SUBSYS_BEFORE_SHUTDOWN) {
 		BAM_DMUX_LOG("%s: begin\n", __func__);
 		in_global_reset = 1;
@@ -2015,10 +1996,6 @@ static int restart_notifier_cb(struct notifier_block *this,
 		BAM_DMUX_LOG("%s: ssr signaling complete\n", __func__);
 		flush_workqueue(bam_mux_rx_workqueue);
 	}
-=======
-	if (code == SUBSYS_BEFORE_SHUTDOWN)
-		in_ssr = 1;
->>>>>>> 9f165c1... msm: bam_dmux: reset bam hardware when A2 goes into pc
 	if (code != SUBSYS_AFTER_SHUTDOWN)
 		return NOTIFY_DONE;
 
