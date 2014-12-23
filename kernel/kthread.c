@@ -123,20 +123,12 @@ void *kthread_data(struct task_struct *task)
 
 static void __kthread_parkme(struct kthread *self)
 {
-<<<<<<< HEAD
-	__set_current_state(TASK_PARKED);
-=======
 	__set_current_state(TASK_INTERRUPTIBLE);
->>>>>>> 9c702de... kthread: Implement park/unpark facility
 	while (test_bit(KTHREAD_SHOULD_PARK, &self->flags)) {
 		if (!test_and_set_bit(KTHREAD_IS_PARKED, &self->flags))
 			complete(&self->parked);
 		schedule();
-<<<<<<< HEAD
-		__set_current_state(TASK_PARKED);
-=======
 		__set_current_state(TASK_INTERRUPTIBLE);
->>>>>>> 9c702de... kthread: Implement park/unpark facility
 	}
 	clear_bit(KTHREAD_IS_PARKED, &self->flags);
 	__set_current_state(TASK_RUNNING);
@@ -263,18 +255,12 @@ struct task_struct *kthread_create_on_node(int (*threadfn)(void *data),
 }
 EXPORT_SYMBOL(kthread_create_on_node);
 
-<<<<<<< HEAD
 static void __kthread_bind(struct task_struct *p, unsigned int cpu, long state)
 {
 	/* Must have done schedule() in kthread() before we set_task_cpu */
 	if (!wait_task_inactive(p, state)) {
 		WARN_ON(1);
 		return;
-	}
-=======
-static void __kthread_bind(struct task_struct *p, unsigned int cpu)
-{
->>>>>>> 9c702de... kthread: Implement park/unpark facility
 	/* It's safe because the task is inactive. */
 	do_set_cpus_allowed(p, cpumask_of(cpu));
 	p->flags |= PF_THREAD_BOUND;
@@ -350,7 +336,6 @@ static void __kthread_unpark(struct task_struct *k, struct kthread *kthread)
 			__kthread_bind(k, kthread->cpu, TASK_PARKED);
 		wake_up_state(k, TASK_PARKED);
 	}
-<<<<<<< HEAD
 }
 
 /**
@@ -399,9 +384,7 @@ int kthread_park(struct task_struct *k)
 	}
 	put_task_struct(k);
 	return ret;
-=======
 	__kthread_bind(p, cpu);
->>>>>>> 9c702de... kthread: Implement park/unpark facility
 }
 
 /**
@@ -528,11 +511,8 @@ int kthread_stop(struct task_struct *k)
 	trace_sched_kthread_stop(k);
 	if (kthread) {
 		set_bit(KTHREAD_SHOULD_STOP, &kthread->flags);
-<<<<<<< HEAD
 		__kthread_unpark(k, kthread);
-=======
 		clear_bit(KTHREAD_SHOULD_PARK, &kthread->flags);
->>>>>>> 9c702de... kthread: Implement park/unpark facility
 		wake_up_process(k);
 		wait_for_completion(&kthread->exited);
 	}
