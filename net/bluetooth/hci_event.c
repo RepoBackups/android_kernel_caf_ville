@@ -60,7 +60,7 @@ static void hci_cc_inquiry_cancel(struct hci_dev *hdev, struct sk_buff *skb)
 
 	hci_req_complete(hdev, HCI_OP_INQUIRY_CANCEL, status);
 
-v	hci_conn_check_pending(hdev);
+	hci_conn_check_pending(hdev);
 }
 
 static void hci_cc_exit_periodic_inq(struct hci_dev *hdev, struct sk_buff *skb)
@@ -3130,56 +3130,13 @@ static inline void hci_user_ssp_confirmation_evt(struct hci_dev *hdev,
 
 	hci_dev_lock(hdev);
 
-	if (!test_bit(HCI_MGMT, &hdev->dev_flags))
-		goto unlock;
-
-	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &ev->bdaddr);
-	if (!conn)
-		goto unlock;
-
-	loc_mitm = (conn->auth_type & 0x01);
-	rem_mitm = (conn->remote_auth & 0x01);
-
-	/* If we require MITM but the remote device can't provide that
-	 * (it has NoInputNoOutput) then reject the confirmation
-	 * request. The only exception is when we're dedicated bonding
-	 * initiators (connect_cfm_cb set) since then we always have the MITM
-	 * bit set. */
-	if (!conn->connect_cfm_cb && loc_mitm && conn->remote_cap == 0x03) {
-		BT_DBG("Rejecting request: remote device can't provide MITM");
-		hci_send_cmd(hdev, HCI_OP_USER_CONFIRM_NEG_REPLY,
-					sizeof(ev->bdaddr), &ev->bdaddr);
-		goto unlock;
-	}
-
-	/* If no side requires MITM protection; auto-accept */
-	if ((!loc_mitm || conn->remote_cap == 0x03) &&
-				(!rem_mitm || conn->io_capability == 0x03)) {
-
-		/* If we're not the initiators request authorization to
-		 * proceed from user space (mgmt_user_confirm with
-		 * confirm_hint set to 1). The exception is if neither
-		 * side had MITM in which case we do auto-accept.
-		 */
-		if (!test_bit(HCI_CONN_AUTH_PEND, &conn->flags) &&
-		    (loc_mitm || rem_mitm)) {
-			BT_DBG("Confirming auto-accept as acceptor");
-			confirm_hint = 1;
-			goto confirm;
-		}
-
-		BT_DBG("Auto-accept of user confirmation with %ums delay",
-						hdev->auto_accept_delay);
-
-		if (hdev->auto_accept_delay > 0) {
-			int delay = msecs_to_jiffies(hdev->auto_accept_delay);
-			mod_timer(&conn->auto_accept_timer, jiffies + delay);
-			goto unlock;
-		}
-
-		hci_send_cmd(hdev, HCI_OP_USER_CONFIRM_REPLY,
-						sizeof(ev->bdaddr), &ev->bdaddr);
-		goto unlock;
+	if (test_bit(HCI_MGMT, &hdev->flags)) {
+		if (event == HCI_EV_USER_PASSKEY_REQUEST)
+			mgmt_user_confirm_request(hdev->id, event,
+							&ev->bdaddr, 0);
+		else
+			mgmt_user_confirm_request(hdev->id, event,
+						&ev->bdaddr, ev->passkey);
 	}
 
 	hci_dev_unlock(hdev);
@@ -3379,17 +3336,6 @@ static inline void hci_le_ltk_request_evt(struct hci_dev *hdev,
 	conn->pin_length = ltk->pin_len;
 
 	hci_send_cmd(hdev, HCI_OP_LE_LTK_REPLY, sizeof(cp), &cp);
-
-	/* Ref. Bluetooth Core SPEC pages 1975 and 2004. STK is a
-	 * temporary key used to encrypt a connection following
-	 * pairing. It is used during the Encrypted Session Setup to
-	 * distribute the keys. Later, security can be re-established
-	 * using a distributed LTK.
-	 */
-	if (ltk->type == HCI_SMP_STK_SLAVE) {
-		list_del(&ltk->list);
-		kfree(ltk);
-	}
 
 	hci_dev_unlock(hdev);
 
