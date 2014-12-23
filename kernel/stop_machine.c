@@ -308,10 +308,6 @@ static void cpu_stop_create(unsigned int cpu)
 static void cpu_stop_park(unsigned int cpu)
 {
 	struct cpu_stopper *stopper = &per_cpu(cpu_stopper, cpu);
-<<<<<<< HEAD
-	struct cpu_stop_work *work;
-	unsigned long flags;
-=======
 	struct task_struct *p = per_cpu(cpu_stopper_task, cpu);
 
 	switch (action & ~CPU_TASKS_FROZEN) {
@@ -360,7 +356,6 @@ static void cpu_stop_park(unsigned int cpu)
 	}
 #endif
 	}
->>>>>>> 25809d3... stop_machine: Store task reference in a separate per cpu variable
 
 	/* drain remaining works */
 	spin_lock_irqsave(&stopper->lock, flags);
