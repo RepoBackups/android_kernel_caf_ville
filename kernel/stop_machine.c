@@ -319,15 +319,6 @@ static void cpu_stop_park(unsigned int cpu)
 	spin_unlock_irqrestore(&stopper->lock, flags);
 }
 
-<<<<<<< HEAD
-	/* drain remaining works */
-	spin_lock_irqsave(&stopper->lock, flags);
-	list_for_each_entry(work, &stopper->works, list)
-		cpu_stop_signal_done(work->done, false);
-	stopper->enabled = false;
-	spin_unlock_irqrestore(&stopper->lock, flags);
-}
-
 static void cpu_stop_unpark(unsigned int cpu)
 {
 	struct cpu_stopper *stopper = &per_cpu(cpu_stopper, cpu);
@@ -337,17 +328,6 @@ static void cpu_stop_unpark(unsigned int cpu)
 	spin_unlock_irq(&stopper->lock);
 }
 
-=======
-static void cpu_stop_unpark(unsigned int cpu)
-{
-	struct cpu_stopper *stopper = &per_cpu(cpu_stopper, cpu);
-
-	spin_lock_irq(&stopper->lock);
-	stopper->enabled = true;
-	spin_unlock_irq(&stopper->lock);
-}
-
->>>>>>> f6c21d9... stop_machine: Use smpboot threads
 static struct smp_hotplug_thread cpu_stop_threads = {
 	.store			= &cpu_stopper_task,
 	.thread_should_run	= cpu_stop_should_run,
@@ -356,11 +336,7 @@ static struct smp_hotplug_thread cpu_stop_threads = {
 	.create			= cpu_stop_create,
 	.setup			= cpu_stop_unpark,
 	.park			= cpu_stop_park,
-<<<<<<< HEAD
-	.pre_unpark		= cpu_stop_unpark,
-=======
 	.unpark			= cpu_stop_unpark,
->>>>>>> f6c21d9... stop_machine: Use smpboot threads
 	.selfparking		= true,
 };
 
