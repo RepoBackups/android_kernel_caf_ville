@@ -18,11 +18,13 @@
 
 #include <linux/ion.h>
 
+#ifdef CONFIG_NEVER_WILL_EXIST
 enum msm_ion_heap_types {
 	ION_HEAP_TYPE_MSM_START = ION_HEAP_TYPE_CUSTOM + 1,
 	ION_HEAP_TYPE_IOMMU = ION_HEAP_TYPE_MSM_START,
 	ION_HEAP_TYPE_CP,
 };
+#endif
 
 /**
  * These are the only ids that should be used for Ion heap ids.

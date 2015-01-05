@@ -123,17 +123,8 @@ extern struct group_info init_groups;
 
 extern struct cred init_cred;
 
-extern struct task_group root_task_group;
-
-#ifdef CONFIG_CGROUP_SCHED
-# define INIT_CGROUP_SCHED(tsk)						\
-	.sched_task_group = &root_task_group,
-#else
-# define INIT_CGROUP_SCHED(tsk)
-#endif
-
 #ifdef CONFIG_PERF_EVENTS
-# define INIT_PERF_EVENTS(tsk)						\
+# define INIT_PERF_EVENTS(tsk)					\
 	.perf_event_mutex = 						\
 		 __MUTEX_INITIALIZER(tsk.perf_event_mutex),		\
 	.perf_event_list = LIST_HEAD_INIT(tsk.perf_event_list),
@@ -143,10 +134,6 @@ extern struct task_group root_task_group;
 
 #define INIT_TASK_COMM "swapper"
 
-/*
- *  INIT_TASK is used to set up the first task table, touch at
- * your own risk!. Base=0, limit=0x1fffff (=2MB)
- */
 #define INIT_TASK(tsk)	\
 {									\
 	.state		= 0,						\
@@ -170,7 +157,6 @@ extern struct task_group root_task_group;
 	},								\
 	.tasks		= LIST_HEAD_INIT(tsk.tasks),			\
 	INIT_PUSHABLE_TASKS(tsk)					\
-	INIT_CGROUP_SCHED(tsk)						\
 	.ptraced	= LIST_HEAD_INIT(tsk.ptraced),			\
 	.ptrace_entry	= LIST_HEAD_INIT(tsk.ptrace_entry),		\
 	.real_parent	= &tsk,						\
@@ -195,7 +181,7 @@ extern struct task_group root_task_group;
 	.journal_info	= NULL,						\
 	.cpu_timers	= INIT_CPU_TIMERS(tsk.cpu_timers),		\
 	.pi_lock	= __RAW_SPIN_LOCK_UNLOCKED(tsk.pi_lock),	\
-	.timer_slack_ns = 50000, /* 50 usec default slack */		\
+	.timer_slack_ns = 50000, 		\
 	.pids = {							\
 		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
 		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
@@ -220,7 +206,6 @@ extern struct task_group root_task_group;
 	LIST_HEAD_INIT(cpu_timers[2]),					\
 }
 
-/* Attach to the init_task data structure for proper alignment */
 #define __init_task_data __attribute__((__section__(".data..init_task")))
 
 
