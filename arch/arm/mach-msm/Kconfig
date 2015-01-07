@@ -1574,9 +1574,15 @@ config MSM_DALRPC_TEST
 	default m
 	help
 	  Exercises DAL RPC calls to QDSP6.
+#
+# CPU Hotplug Driver Dependencies
+#
 
 source "arch/arm/hotplug/Kconfig"
 
+#
+# CPU Hotplug Driver Choices
+#
 choice
 	prompt "CPU HotPlug Driver Choice"
 	default MSM_MPDECISION
@@ -1589,7 +1595,22 @@ config INTELLI_PLUG_HOTPLUG
         select INTELLI_PLUG
         help
           Generic Intelli-Plug cpu hotplug driver for ARM SOCs
+config MSM_MPDEC
+	bool "MSM_MPDECISION from @ShowP1984"
+	depends on MSM_SMP
+	select MSM_MPDEC_INPUTBOOST_CPUMIN
+	default n
+	help
+	  This enables kernel based multi core control.
+	  (up/down hotplug based on load)
 endchoice
+
+config MSM_MPDEC_INPUTBOOST_CPUMIN
+        bool "Enable kernel based mpdecision"
+        depends on MSM_MPDEC
+        default y
+        help
+          This pushes the cpu min speed to predefined values on input
 
 config CMDLINE_OPTIONS
 	bool "Enable cmdline khz/gov/maxscroff command parsing"
