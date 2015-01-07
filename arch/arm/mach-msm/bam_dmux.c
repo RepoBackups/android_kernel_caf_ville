@@ -1859,8 +1859,6 @@ static void disconnect_to_bam(void)
 			bam_ops->sps_disconnect_ptr(bam_rx_pipe);
 			__memzero(rx_desc_mem_buf.base, rx_desc_mem_buf.size);
 			__memzero(tx_desc_mem_buf.base, tx_desc_mem_buf.size);
-			bam_opx->sps_disconnect(bam_rx_pipe);
-			sps_device_reset(a2_device_handle);
 		} else {
 			ssr_skipped_disconnect = 1;
 		}

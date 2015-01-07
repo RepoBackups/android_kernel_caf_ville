@@ -15,7 +15,7 @@
 
 #include <linux/idr.h>
 #include <linux/pm_qos.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 
 #include "kgsl.h"
 #include "kgsl_mmu.h"
@@ -28,7 +28,6 @@
 #define KGSL_TIMEOUT_DEFAULT        0xFFFFFFFF
 #define KGSL_TIMEOUT_PART           50 /* 50 msec */
 #define KGSL_TIMEOUT_LONG_IB_DETECTION  2000 /* 2 sec*/
-#define KGSL_TIMEOUT_HANG_DETECT	200	/* 200 msec */
 
 #define FIRST_TIMEOUT (HZ / 2)
 
@@ -187,7 +186,7 @@ struct kgsl_device {
 	struct completion ft_gate;
 	struct dentry *d_debugfs;
 	struct idr context_idr;
-	struct early_suspend display_off;
+	struct power_suspend display_off;
 	rwlock_t context_lock;
 
 	void *snapshot;		/* Pointer to the snapshot memory region */
@@ -546,20 +545,6 @@ static inline void kgsl_context_cancel_events(struct kgsl_device *device,
 	kgsl_signal_events(device, context, KGSL_EVENT_CANCELLED);
 }
 
-/**
- * kgsl_context_cancel_events_timestamp - cancel events for a given timestamp
- * @device: Pointer to the KGSL device that owns the context
- * @cotnext: Pointer to the context that owns the event or NULL for global
- * @timestamp: Timestamp to cancel events for
- *
- * Cancel events pending for a specific timestamp
- */
-static inline void kgsl_cancel_events_timestamp(struct kgsl_device *device,
-	struct kgsl_context *context, unsigned int timestamp)
-{
-	kgsl_signal_event(device, context, timestamp, KGSL_EVENT_CANCELLED);
-}
-
 
 /**
 * kgsl_process_private_get() - increment the refcount on a kgsl_process_private
@@ -583,22 +568,17 @@ void kgsl_process_private_put(struct kgsl_process_private *private);
 struct kgsl_process_private *kgsl_process_private_find(pid_t pid);
 
 /**
- * kgsl_sysfs_store() - parse a string from a sysfs store function
- * @buf: Incoming string to parse
- * @ptr: Pointer to an unsigned int to store the value
+ * kgsl_context_cancel_events_timestamp - cancel events for a given timestamp
+ * @device: Pointer to the KGSL device that owns the context
+ * @cotnext: Pointer to the context that owns the event or NULL for global
+ * @timestamp: Timestamp to cancel events for
+ *
+ * Cancel events pending for a specific timestamp
  */
-static inline int kgsl_sysfs_store(const char *buf, unsigned int *ptr)
+static inline void kgsl_cancel_events_timestamp(struct kgsl_device *device,
+	struct kgsl_context *context, unsigned int timestamp)
 {
-	unsigned int val;
-	int rc;
-
-	rc = kstrtou32(buf, 0, &val);
-	if (rc)
-		return rc;
-
-	if (ptr)
-		*ptr = val;
-
-	return 0;
+	kgsl_signal_event(device, context, timestamp, KGSL_EVENT_CANCELLED);
 }
+
 #endif  /* __KGSL_DEVICE_H */

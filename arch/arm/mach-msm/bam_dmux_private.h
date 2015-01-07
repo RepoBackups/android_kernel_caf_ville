@@ -171,3 +171,4 @@ void msm_bam_dmux_deinit(void);
 void msm_bam_dmux_reinit(void);
 
 #endif /* _BAM_DMUX_PRIVATE_H */
+

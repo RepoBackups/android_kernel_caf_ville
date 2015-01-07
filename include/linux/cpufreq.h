@@ -23,13 +23,6 @@
 
 #define CPUFREQ_NAME_LEN 16
 
-#ifdef CONFIG_CMDLINE_OPTIONS
-/* cmdline_khz variables */
-extern uint32_t cmdline_maxkhz;
-extern char cmdline_gov[16];
-extern int cmdline_gov_cnt;
-
-#endif
 
 /*********************************************************************
  *                     CPUFREQ NOTIFIER INTERFACE                    *

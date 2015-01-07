@@ -17,7 +17,7 @@
  *
  */
 
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/cpufreq.h>
@@ -398,7 +398,8 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 extern bool lmf_screen_state;
 #endif
 
-static void msm_cpu_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_POWERSUSPEND
+static void msm_cpu_power_suspend(struct power_suspend *h)
 {
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
 	int cpu = 0;
@@ -411,7 +412,7 @@ static void msm_cpu_early_suspend(struct early_suspend *h)
 #endif
 }
 
-static void msm_cpu_late_resume(struct early_suspend *h)
+static void msm_cpu_late_resume(struct power_suspend *h)
 {
 #ifdef CONFIG_CPUFREQ_LIMIT_MAX_FREQ
 	int cpu = 0;
@@ -424,12 +425,14 @@ static void msm_cpu_late_resume(struct early_suspend *h)
 		}
 #endif
 }
+#endif
 
-static struct early_suspend msm_cpu_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	.suspend = msm_cpu_early_suspend,
+#ifdef CONFIG_POWERSUSPEND
+static struct power_suspend msm_cpu_power_suspend_handler = {
+	.suspend = msm_cpu_power_suspend,
 	.resume = msm_cpu_late_resume,
 };
+#endif
 
 static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		unsigned long action, void *hcpu)
@@ -464,8 +467,7 @@ static int __cpuinit msm_cpufreq_cpu_callback(struct notifier_block *nfb,
 		break;
 	case CPU_UP_PREPARE:
 		if (is_clk) {
-			rc = clk_prepare_enable(cpu_clk[cpu]);
-			if (rc < 0)
+			if (clk_prepare_enable(cpu_clk[cpu]) < 0)
 				return NOTIFY_BAD;
 			update_l2_bw(&cpu);
 		}
@@ -727,7 +729,7 @@ static int __init msm_cpufreq_register(void)
 	platform_driver_probe(&msm_cpufreq_plat_driver, msm_cpufreq_probe);
 	msm_cpufreq_wq = alloc_workqueue("msm-cpufreq", WQ_HIGHPRI, 0);
 	register_hotcpu_notifier(&msm_cpufreq_cpu_notifier);
-	register_early_suspend(&msm_cpu_early_suspend_handler);
+	register_power_suspend(&msm_cpu_power_suspend_handler);
 	return cpufreq_register_driver(&msm_cpufreq_driver);
 }
 

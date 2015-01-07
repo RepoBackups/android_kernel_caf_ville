@@ -1,4 +1,4 @@
-/* kernel/power/consoleearlysuspend.c
+/* kernel/power/consolepowersuspend.c
  *
  * Copyright (C) 2005-2008 Google, Inc.
  *
@@ -14,7 +14,7 @@
  */
 
 #include <linux/console.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/kbd_kern.h>
 #include <linux/module.h>
 #include <linux/vt_kern.h>
@@ -23,7 +23,7 @@
 #define EARLY_SUSPEND_CONSOLE	(MAX_NR_CONSOLES-1)
 
 static int orig_fgconsole;
-static void console_early_suspend(struct early_suspend *h)
+static void console_power_suspend(struct power_suspend *h)
 {
 	acquire_console_sem();
 	orig_fgconsole = fg_console;
@@ -34,14 +34,14 @@ static void console_early_suspend(struct early_suspend *h)
 	release_console_sem();
 
 	if (vt_waitactive(EARLY_SUSPEND_CONSOLE + 1))
-		pr_warning("console_early_suspend: Can't switch VCs.\n");
+		pr_warning("console_power_suspend: Can't switch VCs.\n");
 	return;
 err:
-	pr_warning("console_early_suspend: Can't set console\n");
+	pr_warning("console_power_suspend: Can't set console\n");
 	release_console_sem();
 }
 
-static void console_late_resume(struct early_suspend *h)
+static void console_late_resume(struct power_suspend *h)
 {
 	int ret;
 	acquire_console_sem();
@@ -56,23 +56,23 @@ static void console_late_resume(struct early_suspend *h)
 		pr_warning("console_late_resume: Can't switch VCs.\n");
 }
 
-static struct early_suspend console_early_suspend_desc = {
+static struct power_suspend console_power_suspend_desc = {
 	.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING,
-	.suspend = console_early_suspend,
+	.suspend = console_power_suspend,
 	.resume = console_late_resume,
 };
 
-static int __init console_early_suspend_init(void)
+static int __init console_power_suspend_init(void)
 {
-	register_early_suspend(&console_early_suspend_desc);
+	register_power_suspend(&console_power_suspend_desc);
 	return 0;
 }
 
-static void  __exit console_early_suspend_exit(void)
+static void  __exit console_power_suspend_exit(void)
 {
-	unregister_early_suspend(&console_early_suspend_desc);
+	unregister_power_suspend(&console_power_suspend_desc);
 }
 
-module_init(console_early_suspend_init);
-module_exit(console_early_suspend_exit);
+module_init(console_power_suspend_init);
+module_exit(console_power_suspend_exit);
 

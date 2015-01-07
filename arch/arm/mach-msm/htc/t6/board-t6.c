@@ -4458,7 +4458,6 @@ static void __init t6_common_init(void)
 	struct kobject *properties_kobj;
 
 	pr_info("%s: init starts\r\n", __func__);
-	htc_add_ramconsole_devices();
 	platform_device_register(&msm_gpio_device);
 	if (cpu_is_apq8064ab())
 		apq8064ab_update_krait_spm();

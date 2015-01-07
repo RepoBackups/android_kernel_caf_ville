@@ -738,7 +738,7 @@ struct bma250_platform_data {
 	int calibration_mode;
 	int gs_kvalue;
 	unsigned int (*G_Sensor_Compass_POR)(void);
-#if defined (CONFIG_SENSORS_BMA250_BOSCH) || defined (CONFIG_SENSORS_ONLY_BMA250)
+#ifdef CONFIG_SENSORS_BMA250_BOSCH
 	short layouts[4][3][3];
 #endif
         

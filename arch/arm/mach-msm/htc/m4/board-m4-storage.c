@@ -260,6 +260,7 @@ void __init msm8930_init_mmc(void)
 	}
 	msm_add_sdcc(3, &msm8930_sdc3_data);
 #endif
+	msm_add_uio();
 }
 
 struct msm_mmc_pad_drv_data *mmc_get_pdd_drv_data(int controller)
