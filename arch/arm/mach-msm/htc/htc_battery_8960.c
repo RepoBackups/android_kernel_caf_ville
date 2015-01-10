@@ -34,11 +34,16 @@
 #include <mach/mpp.h>
 #include <linux/android_alarm.h>
 #include <linux/suspend.h>
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 
 #include <mach/htc_gauge.h>
 #include <mach/htc_charger.h>
 #include <mach/htc_battery_cell.h>
+
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif 
+
 #define MSPERIOD(end, start)	ktime_to_ms(ktime_sub(end, start))
 
 #define HTC_BATT_CHG_DIS_BIT_EOC	(1)
@@ -132,10 +137,7 @@ static int critical_alarm_level_set;
 struct wake_lock voltage_alarm_wake_lock;
 struct wake_lock batt_shutdown_wake_lock;
 
-#ifdef CONFIG_POWERSUSPEND
-static struct power_suspend power_suspend;
-#endif
-
+static struct early_suspend early_suspend;
 static int screen_state;
 static int pre_screen_state;
 #ifdef CONFIG_HTC_BATT_ALARM
@@ -435,7 +437,13 @@ int htc_charger_event_notify(enum htc_charger_event event)
 		htc_batt_schedule_batt_info_update();
 		break;
 	case HTC_CHARGER_EVENT_SRC_USB: 
-		latest_chg_src = CHARGER_USB;
+		if (force_fast_charge == 1) {
+	  	      printk("[FASTCHARGE] Forcing CHARGER_AC");
+		      latest_chg_src = CHARGER_AC;
+		} else {
+		      printk("[FASTCHARGE] NOT set, using normal CHARGER_USB");
+		      latest_chg_src = CHARGER_USB;
+	        } 
 		htc_batt_schedule_batt_info_update();
 		break;
 	case HTC_CHARGER_EVENT_SRC_AC: 
@@ -1008,9 +1016,8 @@ static void htc_batt_store_battery_ui_soc(int soc_ui)
 static void htc_batt_get_battery_ui_soc(int *soc_ui)
 {
 	int temp_soc;
-#if 0
 	int orig_soc = *soc_ui;
-#endif
+
 	if (htc_batt_info.igauge &&
 			htc_batt_info.igauge->get_battery_ui_soc) {
 		temp_soc = htc_batt_info.igauge->get_battery_ui_soc();
@@ -1019,10 +1026,10 @@ static void htc_batt_get_battery_ui_soc(int *soc_ui)
 		if (temp_soc > 0 && temp_soc <= 100)
 			*soc_ui = temp_soc;
 	}
-#if 0
+
 	BATT_LOG("%s: original soc: %d, changed soc: %d.", __func__,
 		orig_soc, *soc_ui);
-#endif
+
 	return;
 }
 
@@ -2621,8 +2628,8 @@ static struct kobj_type htc_batt_ktype = {
 	.release = htc_batt_kobject_release,
 };
 
-#ifdef CONFIG_POWERSUSPEND
-static void htc_battery_power_suspend(struct power_suspend *h)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void htc_battery_early_suspend(struct early_suspend *h)
 {
 	htc_batt_info.state |= STATE_EARLY_SUSPEND;
 	screen_state = 0;
@@ -2631,7 +2638,7 @@ static void htc_battery_power_suspend(struct power_suspend *h)
 #endif
 }
 
-static void htc_battery_late_resume(struct power_suspend *h)
+static void htc_battery_late_resume(struct early_suspend *h)
 {
 	htc_batt_info.state &= ~STATE_EARLY_SUSPEND;
 	screen_state = 1;
@@ -2921,10 +2928,11 @@ static int htc_battery_probe(struct platform_device *pdev)
 #endif
 
 
-#ifdef CONFIG_POWERSUSPEND
-	power_suspend.suspend = htc_battery_power_suspend;
-	power_suspend.resume = htc_battery_late_resume;
-	register_power_suspend(&power_suspend);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 1;
+	early_suspend.suspend = htc_battery_early_suspend;
+	early_suspend.resume = htc_battery_late_resume;
+	register_early_suspend(&early_suspend);
 #endif
 
 htc_batt_timer.time_out = BATT_TIMER_UPDATE_TIME;

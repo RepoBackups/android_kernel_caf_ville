@@ -52,6 +52,27 @@ static const int elv_hash_shift = 6;
 #define ELV_HASH_ENTRIES	(1 << elv_hash_shift)
 #define rq_hash_key(rq)		(blk_rq_pos(rq) + blk_rq_sectors(rq))
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+static struct elevator_type *elevator_find(const char *name);
+
+char cmdline_scheduler[ELV_NAME_MAX] = CONFIG_DEFAULT_IOSCHED;
+static int __init cy8c_read_scheduler_cmdline(char *scheduler)
+{
+	struct elevator_type *e;
+
+	e = elevator_find(scheduler);
+	if (!e) {
+		strcpy(cmdline_scheduler, scheduler);
+		printk(KERN_INFO "[cmdline_scheduler]: scheduler set to '%s'", cmdline_scheduler);
+	} else {
+		strcpy(cmdline_scheduler, CONFIG_DEFAULT_IOSCHED);
+		printk(KERN_INFO "[cmdline_scheduler]: No valid input found. Using '%s' as default", cmdline_scheduler);
+	}
+	return 1;
+}
+__setup("scheduler=", cy8c_read_scheduler_cmdline);
+#endif
+
 /*
  * Query io scheduler to see if the current process issuing bio may be
  * merged with rq.
@@ -249,7 +270,11 @@ int elevator_init(struct request_queue *q, char *name)
 	}
 
 	if (!e) {
+#ifdef CONFIG_CMDLINE_OPTIONS
+		e = elevator_get(cmdline_scheduler);
+#else
 		e = elevator_get(CONFIG_DEFAULT_IOSCHED);
+#endif
 		if (!e) {
 			printk(KERN_ERR
 				"Default I/O scheduler not found. " \
@@ -1037,7 +1062,7 @@ fail_register:
 /*
  * Switch this queue to the given IO scheduler.
  */
-int elevator_change(struct request_queue *q, const char *name)
+static int __elevator_change(struct request_queue *q, const char *name)
 {
 	char elevator_name[ELV_NAME_MAX];
 	struct elevator_type *e;
@@ -1059,6 +1084,18 @@ int elevator_change(struct request_queue *q, const char *name)
 
 	return elevator_switch(q, e);
 }
+
+int elevator_change(struct request_queue *q, const char *name)
+{
+	int ret;
+
+	/* Protect q->elevator from elevator_init() */
+	mutex_lock(&q->sysfs_lock);
+	ret = __elevator_change(q, name);
+	mutex_unlock(&q->sysfs_lock);
+
+	return ret;
+}
 EXPORT_SYMBOL(elevator_change);
 
 ssize_t elv_iosched_store(struct request_queue *q, const char *name,
@@ -1069,7 +1106,7 @@ ssize_t elv_iosched_store(struct request_queue *q, const char *name,
 	if (!q->elevator)
 		return count;
 
-	ret = elevator_change(q, name);
+	ret = __elevator_change(q, name);
 	if (!ret)
 		return count;
 

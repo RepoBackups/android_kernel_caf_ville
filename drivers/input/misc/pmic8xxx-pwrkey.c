@@ -27,10 +27,6 @@
 #include <linux/input/cy8c_cs.h>
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
-#include <linux/synaptics_i2c_rmi.h>
-#endif
-
 #define PON_CNTL_1 0x1C
 #define PON_CNTL_PULL_UP BIT(7)
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
@@ -186,7 +182,7 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	pwrkey->key_press_irq = key_press_irq;
 	pwrkey->key_release_irq = key_release_irq;
 	pwrkey->pwr = pwr;
-#if defined(CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE)
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 	sweep2wake_setdev(pwr);
 #endif
 	platform_set_drvdata(pdev, pwrkey);

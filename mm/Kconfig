@@ -380,6 +380,17 @@ config CLEANCACHE
 
 	  If unsure, say Y to enable cleancache
 
+config USE_USER_ACCESSIBLE_TIMERS
+	bool "Enables timers accessible from userspace"
+	depends on MMU
+	help
+	  User-accessible timers allow the kernel to map kernel timer
+	  registers to a userspace accessible page, to allow faster
+	  access to time information.  This flag will enable the
+	  interface code in the main kernel.  However, there are
+	  architecture-specific code that will need to be enabled
+	  separately.
+
 config FRONTSWAP
 	bool "Enable frontswap to cache swap pages if tmem is present"
 	depends on SWAP
@@ -396,17 +407,6 @@ config FRONTSWAP
 	  and swap data is stored as normal on the matching swap device.
 
 	  If unsure, say Y to enable frontswap.
-
-config USE_USER_ACCESSIBLE_TIMERS
-	bool "Enables timers accessible from userspace"
-	depends on MMU
-	help
-	  User-accessible timers allow the kernel to map kernel timer
-	  registers to a userspace accessible page, to allow faster
-	  access to time information.  This flag will enable the
-	  interface code in the main kernel.  However, there are
-	  architecture-specific code that will need to be enabled
-	  separately.
 
 config DYNAMIC_PAGE_WRITEBACK
 	bool "Dynamically manage the dirty page writebacks during suspend/resume"

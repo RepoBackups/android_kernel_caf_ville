@@ -128,6 +128,13 @@
 #include <mach/perflock.h>
 #endif
 
+#ifdef CONFIG_CMDLINE_OPTIONS
+	/* setters for cmdline_gpu */
+	int set_kgsl_3d0_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3);
+	int set_kgsl_2d0_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3);
+	int set_kgsl_2d1_freq(unsigned int freq0, unsigned int freq1, unsigned int freq2, unsigned int freq3);
+#endif
+
 extern unsigned int engineerid; // bit 0
 
 #define HW_VER_ID_VIRT		(MSM_TLMM_BASE + 0x00002054)
@@ -816,17 +823,6 @@ static void __init ville_reserve(void)
 
 static void __init msm8960_allocate_memory_regions(void)
 {
-#ifdef CONFIG_KEXEC_HARDBOOT
-	// Reserve space for hardboot page at the end of first system ram block
-	struct membank* bank = &meminfo.bank[0];
-	phys_addr_t start = bank->start + bank->size - SZ_1M;
-	int ret = memblock_remove(start, SZ_1M);
-
-	if(!ret)
-		pr_info("Hardboot page reserved at 0x%X\n", start);
-	else
-		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
-#endif
 	msm8960_allocate_fb_region();
 }
 
@@ -1037,126 +1033,6 @@ static struct platform_device msm_device_wcnss_wlan = {
 	.resource	= resources_wcnss_wlan,
 	.dev		= {.platform_data = &qcom_wcnss_pdata},
 };
-
-#ifdef CONFIG_QSEECOM
-/* qseecom bus scaling */
-static struct msm_bus_vectors qseecom_clks_init_vectors[] = {
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ib = 0,
-		.ab = 0,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = 0,
-		.ab = 0,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPDM,
-		.dst = MSM_BUS_SLAVE_SPDM,
-		.ib = 0,
-		.ab = 0,
-	},
-};
-
-static struct msm_bus_vectors qseecom_enable_dfab_vectors[] = {
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) *  100000UL,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) * 100000UL,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPDM,
-		.dst = MSM_BUS_SLAVE_SPDM,
-		.ib = 0,
-		.ab = 0,
-	},
-};
-
-static struct msm_bus_vectors qseecom_enable_sfpb_vectors[] = {
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ib = 0,
-		.ab = 0,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = 0,
-		.ab = 0,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPDM,
-		.dst = MSM_BUS_SLAVE_SPDM,
-		.ib = (64 * 8) * 1000000UL,
-		.ab = (64 * 8) *  100000UL,
-	},
-};
-
-static struct msm_bus_vectors qseecom_enable_dfab_sfpb_vectors[] = {
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) *  100000UL,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPS,
-		.dst = MSM_BUS_SLAVE_SPS,
-		.ib = (492 * 8) * 1000000UL,
-		.ab = (492 * 8) * 100000UL,
-	},
-	{
-		.src = MSM_BUS_MASTER_SPDM,
-		.dst = MSM_BUS_SLAVE_SPDM,
-		.ib = (64 * 8) * 1000000UL,
-		.ab = (64 * 8) *  100000UL,
-	},
-};
-
-static struct msm_bus_paths qseecom_hw_bus_scale_usecases[] = {
-	{
-		ARRAY_SIZE(qseecom_clks_init_vectors),
-		qseecom_clks_init_vectors,
-	},
-	{
-		ARRAY_SIZE(qseecom_enable_dfab_vectors),
-		qseecom_enable_dfab_vectors,
-	},
-	{
-		ARRAY_SIZE(qseecom_enable_sfpb_vectors),
-		qseecom_enable_sfpb_vectors,
-	},
-	{
-		ARRAY_SIZE(qseecom_enable_dfab_sfpb_vectors),
-		qseecom_enable_dfab_sfpb_vectors,
-	},
-};
-
-static struct msm_bus_scale_pdata qseecom_bus_pdata = {
-	qseecom_hw_bus_scale_usecases,
-	ARRAY_SIZE(qseecom_hw_bus_scale_usecases),
-	.name = "qsee",
-};
-
-static struct platform_device qseecom_device = {
-	.name		= "qseecom",
-	.id		= 0,
-	.dev		= {
-		.platform_data = &qseecom_bus_pdata,
-	},
-};
-#endif
 
 #if defined(CONFIG_CRYPTO_DEV_QCRYPTO) || \
 		defined(CONFIG_CRYPTO_DEV_QCRYPTO_MODULE) || \
@@ -2040,7 +1916,7 @@ static void ville_usb_dpdn_switch(int path)
 		break;
 	}
 	}
-#if defined(CONFIG_FB_MSM_HDMI_MHL_SII9234) && defined(CONFIG_POWERSUSPEND)
+#ifdef CONFIG_FB_MSM_HDMI_MHL_SII9234
 	sii9234_change_usb_owner((path == PATH_MHL) ? 1 : 0);
 #endif
 }
@@ -2995,11 +2871,30 @@ static struct platform_device msm_tsens_device = {
 
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 0,
+#ifdef CONFIG_INTELLI_THERMAL
+        .poll_ms = 250,
+#ifdef CONFIG_CPU_OVERCLOCK
+        .limit_temp_degC = 70,
+#else
+        .limit_temp_degC = 60,
+#endif
+        .temp_hysteresis_degC = 10,
+        .freq_step = 2,
+        .freq_control_mask = 0xf,
+        .core_limit_temp_degC = 80,
+        .core_temp_hysteresis_degC = 10,
+        .core_control_mask = 0xe,
+#else
 	.poll_ms = 1000,
+#ifdef CONFIG_CPU_OVERCLOCK
+	.limit_temp_degC = 70,
+#else
 	.limit_temp_degC = 60,
+#endif
 	.temp_hysteresis_degC = 10,
 //	.limit_freq = 918000,
 	.freq_step = 2,
+#endif
 };
 
 #ifdef CONFIG_MSM_FAKE_BATTERY
@@ -3735,6 +3630,10 @@ static void msm_region_id_gpio_init(void)
 	gpio_tlmm_config(msm_region_gpio[0], GPIO_CFG_ENABLE);
 }
 
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND 
+int id_set_two_phase_freq(int cpufreq);
+#endif
+
 #ifdef CONFIG_RAWCHIP
 static struct spi_board_info rawchip_spi_board_info[] __initdata = {
 	{
@@ -3754,6 +3653,7 @@ static void __init ville_init(void)
 	if (meminfo_init(SYS_MEMORY, SZ_256M) < 0)
 		pr_err("meminfo_init() failed!\n");
 
+	htc_add_ramconsole_devices();
 	platform_device_register(&msm_gpio_device);
 
 	msm_tsens_early_init(&msm_tsens_pdata);
@@ -3821,7 +3721,16 @@ static void __init ville_init(void)
 
 //	create_proc_read_entry("emmc", 0, NULL, emmc_partition_read_proc, NULL);
 //	create_proc_read_entry("dying_processes", 0, NULL, dying_processors_read_proc, NULL);
-
+#ifdef CONFIG_CPU_FREQ_GOV_INTELLIDEMAND
+        if(!cpu_is_krait_v1())
+                id_set_two_phase_freq(1134000);
+#endif
+#ifdef CONFIG_CMDLINE_OPTIONS
+	/* setters for cmdline_gpu */
+	set_kgsl_3d0_freq(cmdline_3dgpu[0], cmdline_3dgpu[1], cmdline_3dgpu[2], cmdline_3dgpu[3]);
+	set_kgsl_2d0_freq(cmdline_2dgpu[0], cmdline_2dgpu[1], cmdline_2dgpu[2], cmdline_2dgpu[3]);
+	set_kgsl_2d1_freq(cmdline_2dgpu[0], cmdline_2dgpu[1], cmdline_2dgpu[2], cmdline_2dgpu[3]);
+#endif
 	/*usb driver won't be loaded in MFG 58 station and gift mode*/
 	if (!(board_mfg_mode() == 6 || board_mfg_mode() == 7))
 		ville_add_usb_devices();

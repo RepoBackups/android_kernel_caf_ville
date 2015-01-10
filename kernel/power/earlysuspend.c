@@ -1,4 +1,4 @@
-/* kernel/power/powersuspend.c
+/* kernel/power/earlysuspend.c
  *
  * Copyright (C) 2005-2008 Google, Inc.
  *
@@ -13,11 +13,10 @@
  *
  */
 
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/rtc.h>
-#include <linux/syscalls.h> /* sys_sync */
 #include <linux/wakelock.h>
 #include <linux/workqueue.h>
 
@@ -31,11 +30,11 @@ enum {
 static int debug_mask = DEBUG_USER_STATE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
-static DEFINE_MUTEX(power_suspend_lock);
-static LIST_HEAD(power_suspend_handlers);
-static void power_suspend(struct work_struct *work);
+static DEFINE_MUTEX(early_suspend_lock);
+static LIST_HEAD(early_suspend_handlers);
+static void early_suspend(struct work_struct *work);
 static void late_resume(struct work_struct *work);
-static DECLARE_WORK(power_suspend_work, power_suspend);
+static DECLARE_WORK(early_suspend_work, early_suspend);
 static DECLARE_WORK(late_resume_work, late_resume);
 static DEFINE_SPINLOCK(state_lock);
 enum {
@@ -45,39 +44,39 @@ enum {
 };
 static int state;
 
-void register_power_suspend(struct power_suspend *handler)
+void register_early_suspend(struct early_suspend *handler)
 {
 	struct list_head *pos;
 
-	mutex_lock(&power_suspend_lock);
-	list_for_each(pos, &power_suspend_handlers) {
-		struct power_suspend *e;
-		e = list_entry(pos, struct power_suspend, link);
+	mutex_lock(&early_suspend_lock);
+	list_for_each(pos, &early_suspend_handlers) {
+		struct early_suspend *e;
+		e = list_entry(pos, struct early_suspend, link);
 		if (e->level > handler->level)
 			break;
 	}
 	list_add_tail(&handler->link, pos);
 	if ((state & SUSPENDED) && handler->suspend)
 		handler->suspend(handler);
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&early_suspend_lock);
 }
-EXPORT_SYMBOL(register_power_suspend);
+EXPORT_SYMBOL(register_early_suspend);
 
-void unregister_power_suspend(struct power_suspend *handler)
+void unregister_early_suspend(struct early_suspend *handler)
 {
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&early_suspend_lock);
 	list_del(&handler->link);
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&early_suspend_lock);
 }
-EXPORT_SYMBOL(unregister_power_suspend);
+EXPORT_SYMBOL(unregister_early_suspend);
 
-static void power_suspend(struct work_struct *work)
+static void early_suspend(struct work_struct *work)
 {
-	struct power_suspend *pos;
+	struct early_suspend *pos;
 	unsigned long irqflags;
 	int abort = 0;
 
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&early_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED)
 		state |= SUSPENDED;
@@ -87,26 +86,23 @@ static void power_suspend(struct work_struct *work)
 
 	if (abort) {
 		if (debug_mask & DEBUG_SUSPEND)
-			pr_info("power_suspend: abort, state %d\n", state);
-		mutex_unlock(&power_suspend_lock);
+			pr_info("early_suspend: abort, state %d\n", state);
+		mutex_unlock(&early_suspend_lock);
 		goto abort;
 	}
 
 	if (debug_mask & DEBUG_SUSPEND)
-		pr_info("power_suspend: call handlers\n");
-	list_for_each_entry(pos, &power_suspend_handlers, link) {
+		pr_info("early_suspend: call handlers\n");
+	list_for_each_entry(pos, &early_suspend_handlers, link) {
 		if (pos->suspend != NULL) {
 			if (debug_mask & DEBUG_VERBOSE)
-				pr_info("power_suspend: calling %pf\n", pos->suspend);
+				pr_info("early_suspend: calling %pf\n", pos->suspend);
 			pos->suspend(pos);
 		}
 	}
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&early_suspend_lock);
 
-	if (debug_mask & DEBUG_SUSPEND)
-		pr_info("power_suspend: sync\n");
-
-	sys_sync();
+	suspend_sys_sync_queue();
 abort:
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED_AND_SUSPENDED)
@@ -116,11 +112,11 @@ abort:
 
 static void late_resume(struct work_struct *work)
 {
-	struct power_suspend *pos;
+	struct early_suspend *pos;
 	unsigned long irqflags;
 	int abort = 0;
 
-	mutex_lock(&power_suspend_lock);
+	mutex_lock(&early_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPENDED)
 		state &= ~SUSPENDED;
@@ -135,7 +131,7 @@ static void late_resume(struct work_struct *work)
 	}
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: call handlers\n");
-	list_for_each_entry_reverse(pos, &power_suspend_handlers, link) {
+	list_for_each_entry_reverse(pos, &early_suspend_handlers, link) {
 		if (pos->resume != NULL) {
 			if (debug_mask & DEBUG_VERBOSE)
 				pr_info("late_resume: calling %pf\n", pos->resume);
@@ -146,7 +142,7 @@ static void late_resume(struct work_struct *work)
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("late_resume: done\n");
 abort:
-	mutex_unlock(&power_suspend_lock);
+	mutex_unlock(&early_suspend_lock);
 }
 
 void request_suspend_state(suspend_state_t new_state)
@@ -171,7 +167,7 @@ void request_suspend_state(suspend_state_t new_state)
 	}
 	if (!old_sleep && new_state != PM_SUSPEND_ON) {
 		state |= SUSPEND_REQUESTED;
-		queue_work(suspend_work_queue, &power_suspend_work);
+		queue_work(suspend_work_queue, &early_suspend_work);
 	} else if (old_sleep && new_state == PM_SUSPEND_ON) {
 		state &= ~SUSPEND_REQUESTED;
 		wake_lock(&main_wake_lock);

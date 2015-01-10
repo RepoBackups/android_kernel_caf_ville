@@ -131,7 +131,11 @@ struct compact_control {
 	int order;			/* order a direct compactor needs */
 	int migratetype;		/* MOVABLE, RECLAIMABLE etc */
 	struct zone *zone;
+<<<<<<< HEAD
 	bool contended;			/* True if a lock was contended */
+=======
+	bool *contended;		/* True if a lock was contended */
+>>>>>>> 8457223... mm: compaction: Abort async compaction if locks are contended or taking too long
 };
 
 unsigned long
@@ -370,6 +374,8 @@ extern void set_pageblock_order(void);
 #define ALLOC_HIGH		0x20 /* __GFP_HIGH set */
 #define ALLOC_CPUSET		0x40 /* check for correct cpuset */
 #define ALLOC_CMA		0x80 /* allow allocations from CMA areas */
+#define ALLOC_PFMEMALLOC       0x100 /* Caller has PF_MEMALLOC set */
 
 unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 					    struct list_head *page_list);
+

@@ -23,6 +23,10 @@
 #include <linux/cpu.h>
 #include <linux/regulator/consumer.h>
 #include <linux/iopoll.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/seq_file.h>
+#include <linux/debugfs.h>
+#endif
 
 #include <asm/mach-types.h>
 #include <asm/cpu.h>
@@ -44,6 +48,30 @@
 #define PRI_SRC_SEL_SEC_SRC	0
 #define PRI_SRC_SEL_HFPLL	1
 #define PRI_SRC_SEL_HFPLL_DIV2	2
+
+#ifdef CONFIG_DEBUG_FS
+static unsigned int krait_chip_variant = 0;
+#endif
+
+#ifdef CONFIG_CMDLINE_OPTIONS
+int volt_switch = 0;
+
+static int __init krait_read_uvt_cmdline(char *uvt)
+{
+	if (strcmp(uvt, "1") == 0) {
+		printk(KERN_INFO "[cmdline_uvt]: Undervolt Table enabled. | uvt='%s'", uvt);
+		volt_switch = 1;
+	} else if (strcmp(uvt, "0") == 0) {
+		printk(KERN_INFO "[cmdline_uvt]: Undervolt Table disabled. | uvt='%s'", uvt);
+		volt_switch = 0;
+	} else {
+		printk(KERN_INFO "[cmdline_uvt]: No valid input found. Undervolt Table disabled. | uvt='%s'", uvt);
+		volt_switch = 0;
+	}
+	return 1;
+}
+__setup("uvt=", krait_read_uvt_cmdline);
+#endif
 
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
@@ -989,7 +1017,7 @@ static void __init cpufreq_table_init(void)
 		int i;
 		/* Construct the freq_table tables from acpu_freq_tbl. */
 		for (i = 0, freq_cnt = 0; drv.acpu_freq_tbl[i].speed.khz != 0
-				&& freq_cnt < ARRAY_SIZE(*freq_table); i++) {
+				&& freq_cnt < ARRAY_SIZE(*freq_table)-1; i++) {
 			if (drv.acpu_freq_tbl[i].use_for_scaling) {
 				freq_table[cpu][freq_cnt].index = freq_cnt;
 				freq_table[cpu][freq_cnt].frequency
@@ -1083,8 +1111,13 @@ static struct notifier_block __cpuinitdata acpuclk_cpu_notifier = {
 static const int __init krait_needs_vmin(void)
 {
 #ifdef CONFIG_BYPASS_KRAIT_NEEDS_VMIN
-	return 0;
+#ifdef CONFIG_CMDLINE_OPTIONS
+	if (volt_switch == 1)
+		return 0;
 #else
+		return 0;
+#endif
+#endif
 	switch (read_cpuid_id()) {
 	case 0x511F04D0: /* KR28M2A20 */
 	case 0x511F04D1: /* KR28M2A21 */
@@ -1093,7 +1126,6 @@ static const int __init krait_needs_vmin(void)
 	default:
 		return 0;
 	};
-#endif
 }
 
 static void __init krait_apply_vmin(struct acpu_level *tbl)
@@ -1169,9 +1201,15 @@ static struct pvs_table * __init select_freq_plan(
 
 	if (bin.pvs_valid) {
 		drv.pvs_bin = bin.pvs;
+#ifdef CONFIG_DEBUG_FS
+	        krait_chip_variant = drv.pvs_bin;
+#endif
 		dev_info(drv.dev, "ACPU PVS: %d\n", drv.pvs_bin);
 	} else {
 		drv.pvs_bin = 0;
+#ifdef CONFIG_DEBUG_FS
+	        krait_chip_variant = drv.pvs_bin;
+#endif
 		dev_warn(drv.dev, "ACPU PVS: Defaulting to %d\n",
 			 drv.pvs_bin);
 	}
@@ -1255,6 +1293,41 @@ static void __init hw_init(void)
 
 	bus_init(l2_level);
 }
+
+#ifdef CONFIG_DEBUG_FS
+static int krait_variant_debugfs_show(struct seq_file *s, void *data)
+{
+	seq_printf(s, "Your krait chip variant is: \n");
+	seq_printf(s, "[%s] SLOW \n", ((krait_chip_variant == 0) ? "X" : " "));
+	seq_printf(s, "[%s] NOMINAL \n", ((krait_chip_variant == 1) ? "X" : " "));
+	seq_printf(s, "[%s] FAST \n", ((krait_chip_variant == 3) ? "X" : " "));
+	seq_printf(s, "[%s] FASTER \n", ((krait_chip_variant == 4) ? "X" : " "));
+
+	return 0;
+}
+
+static int krait_variant_debugfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, krait_variant_debugfs_show, inode->i_private);
+}
+
+static const struct file_operations krait_variant_debugfs_fops = {
+	.open		= krait_variant_debugfs_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init krait_variant_debugfs_init(void) {
+        struct dentry *d;
+        d = debugfs_create_file("krait_variant", S_IRUGO, NULL, NULL,
+        &krait_variant_debugfs_fops);
+        if (!d)
+                return -ENOMEM;
+        return 0;
+}
+late_initcall(krait_variant_debugfs_init);
+#endif
 
 int __init acpuclk_krait_init(struct device *dev,
 			      const struct acpuclk_krait_params *params)

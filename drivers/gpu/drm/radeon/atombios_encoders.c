@@ -1048,7 +1048,7 @@ atombios_dig_transmitter_setup(struct drm_encoder *encoder, int action, uint8_t 
 			}
 			if (is_dp)
 				args.v5.ucLaneNum = dp_lane_count;
-			else if (radeon_dig_monitor_is_duallink(encoder, radeon_encoder->pixel_clock))
+			else if (radeon_encoder->pixel_clock > 165000)
 				args.v5.ucLaneNum = 8;
 			else
 				args.v5.ucLaneNum = 4;
@@ -1666,11 +1666,8 @@ atombios_set_encoder_crtc_source(struct drm_encoder *encoder)
 					args.v2.ucEncodeMode = ATOM_ENCODER_MODE_CRT;
 				else
 					args.v2.ucEncodeMode = atombios_get_encoder_mode(encoder);
-			} else if (radeon_encoder->devices & (ATOM_DEVICE_LCD_SUPPORT)) {
-				args.v2.ucEncodeMode = ATOM_ENCODER_MODE_LVDS;
-			} else {
+			} else
 				args.v2.ucEncodeMode = atombios_get_encoder_mode(encoder);
-			}
 			switch (radeon_encoder->encoder_id) {
 			case ENCODER_OBJECT_ID_INTERNAL_UNIPHY:
 			case ENCODER_OBJECT_ID_INTERNAL_UNIPHY1:

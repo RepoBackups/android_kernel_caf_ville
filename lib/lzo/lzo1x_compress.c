@@ -94,63 +94,9 @@ match:
 				*op++ = tt;
 			}
 			do {
-<<<<<<< HEAD
-				m_len += 4;
-				v = get_unaligned((const u32 *) (ip + m_len)) ^
-				    get_unaligned((const u32 *) (m_pos + m_len));
-				if (v != 0)
-					break;
-				m_len += 4;
-				v = get_unaligned((const u32 *) (ip + m_len)) ^
-				    get_unaligned((const u32 *) (m_pos + m_len));
-				if (unlikely(ip + m_len >= ip_end))
-					goto m_len_done;
-			} while (v == 0);
-		}
-#  if defined(__LITTLE_ENDIAN)
-		m_len += (unsigned) __builtin_ctz(v) / 8;
-#  elif defined(__BIG_ENDIAN)
-		m_len += (unsigned) __builtin_clz(v) / 8;
-#  else
-#    error "missing endian definition"
-#  endif
-#else
-		if (unlikely(ip[m_len] == m_pos[m_len])) {
-			do {
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (ip[m_len] != m_pos[m_len])
-					break;
-				m_len += 1;
-				if (unlikely(ip + m_len >= ip_end))
-					goto m_len_done;
-			} while (ip[m_len] == m_pos[m_len]);
-		}
-#endif
-		}
-m_len_done:
-=======
 				*op++ = *ii++;
 			} while (--t > 0);
 		}
->>>>>>> origin/Void
 
 		ip += 3;
 		if (m_pos[3] != *ip++ || m_pos[4] != *ip++

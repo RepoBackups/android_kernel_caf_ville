@@ -520,6 +520,7 @@ void adreno_debugfs_init(struct kgsl_device *device);
 #else
 static inline void adreno_debugfs_init(struct kgsl_device *device) { }
 #endif
+
 /**
  * adreno_set_protected_registers() - Protect the specified range of registers
  * from being accessed by the GPU

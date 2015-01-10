@@ -230,6 +230,47 @@ static bool suitable_migration_target(struct page *page)
 }
 
 /*
+ * Compaction requires the taking of some coarse locks that are potentially
+ * very heavily contended. Check if the process needs to be scheduled or
+ * if the lock is contended. For async compaction, back out in the event
+ * if contention is severe. For sync compaction, schedule.
+ *
+ * Returns true if the lock is held.
+ * Returns false if the lock is released and compaction should abort
+ */
+static bool compact_checklock_irqsave(spinlock_t *lock, unsigned long *flags,
+				      bool locked, struct compact_control *cc)
+{
+	if (need_resched() || spin_is_contended(lock)) {
+		if (locked) {
+			spin_unlock_irqrestore(lock, *flags);
+			locked = false;
+		}
+
+		/* async aborts if taking too long or contended */
+		if (!cc->sync) {
+			if (cc->contended)
+				*cc->contended = true;
+			return false;
+		}
+
+		cond_resched();
+		if (fatal_signal_pending(current))
+			return false;
+	}
+
+	if (!locked)
+		spin_lock_irqsave(lock, *flags);
+	return true;
+}
+
+static inline bool compact_trylock_irqsave(spinlock_t *lock,
+			unsigned long *flags, struct compact_control *cc)
+{
+	return compact_checklock_irqsave(lock, flags, false, cc);
+}
+
+/*
  * Isolate free pages onto a private freelist. Caller must hold zone->lock.
  * If @strict is true, will abort returning 0 on any invalid PFNs or non-free
  * pages inside of the pageblock (even though it may still end up isolating
@@ -447,9 +488,14 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 	unsigned long nr_scanned = 0, nr_isolated = 0;
 	struct list_head *migratelist = &cc->migratepages;
 	isolate_mode_t mode = 0;
+<<<<<<< HEAD
 	unsigned long flags = 0;
 	bool locked = false;
 	struct page *page = NULL, *valid_page = NULL;
+=======
+	unsigned long flags;
+	bool locked;
+>>>>>>> 8457223... mm: compaction: Abort async compaction if locks are contended or taking too long
 
 	/*
 	 * Ensure that there are not too many pages isolated from the LRU
@@ -469,6 +515,7 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 
 	/* Time to isolate some pages for migration */
 	cond_resched();
+<<<<<<< HEAD
 	for (; low_pfn < end_pfn; low_pfn++) {
 		/* give a chance to irqs before checking need_resched() */
 		if (locked && !((low_pfn+1) % SWAP_CLUSTER_MAX)) {
@@ -477,6 +524,24 @@ isolate_migratepages_range(struct zone *zone, struct compact_control *cc,
 				locked = false;
 			}
 		}
+=======
+	spin_lock_irqsave(&zone->lru_lock, flags);
+	locked = true;
+	for (; low_pfn < end_pfn; low_pfn++) {
+		struct page *page;
+
+		/* give a chance to irqs before checking need_resched() */
+		if (!((low_pfn+1) % SWAP_CLUSTER_MAX)) {
+			spin_unlock_irqrestore(&zone->lru_lock, flags);
+			locked = false;
+		}
+
+		/* Check if it is ok to still hold the lock */
+		locked = compact_checklock_irqsave(&zone->lru_lock, &flags,
+								locked, cc);
+		if (!locked)
+			break;
+>>>>>>> 8457223... mm: compaction: Abort async compaction if locks are contended or taking too long
 
 		/*
 		 * migrate_pfn does not necessarily start aligned to a
@@ -600,10 +665,13 @@ next_pageblock:
 
 	if (locked)
 		spin_unlock_irqrestore(&zone->lru_lock, flags);
+<<<<<<< HEAD
 
 	/* Update the pageblock-skip if the whole pageblock was scanned */
 	if (low_pfn == end_pfn)
 		update_pageblock_skip(cc, valid_page, nr_isolated, true);
+=======
+>>>>>>> 8457223... mm: compaction: Abort async compaction if locks are contended or taking too long
 
 	trace_mm_compaction_isolate_migratepages(nr_scanned, nr_isolated);
 
@@ -685,11 +753,32 @@ static void isolate_freepages(struct zone *zone,
 		 * a pfn_valid check. Ensure isolate_freepages_block()
 		 * only scans within a pageblock
 		 */
+<<<<<<< HEAD
 		end_pfn = ALIGN(pfn + 1, pageblock_nr_pages);
 		end_pfn = min(end_pfn, zone_end_pfn);
 		isolated = isolate_freepages_block(cc, pfn, end_pfn,
 						   freelist, false);
 		nr_freepages += isolated;
+=======
+		isolated = 0;
+
+		/*
+		 * The zone lock must be held to isolate freepages. This
+		 * unfortunately this is a very coarse lock and can be
+		 * heavily contended if there are parallel allocations
+		 * or parallel compactions. For async compaction do not
+		 * spin on the lock
+		 */
+		if (!compact_trylock_irqsave(&zone->lock, &flags, cc))
+			break;
+		if (suitable_migration_target(page)) {
+			end_pfn = min(pfn + pageblock_nr_pages, zone_end_pfn);
+			isolated = isolate_freepages_block(pfn, end_pfn,
+							   freelist, false);
+			nr_freepages += isolated;
+		}
+		spin_unlock_irqrestore(&zone->lock, flags);
+>>>>>>> 8457223... mm: compaction: Abort async compaction if locks are contended or taking too long
 
 		/*
 		 * Record the highest PFN we isolated pages from. When next
@@ -996,6 +1085,7 @@ static unsigned long compact_zone_order(struct zone *zone,
 		.migratetype = allocflags_to_migratetype(gfp_mask),
 		.zone = zone,
 		.sync = sync,
+		.contended = contended,
 	};
 	INIT_LIST_HEAD(&cc.freepages);
 	INIT_LIST_HEAD(&cc.migratepages);

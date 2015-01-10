@@ -2091,4 +2091,3 @@ MODULE_DESCRIPTION("r3gd20 digital gyroscope sysfs driver");
 MODULE_AUTHOR("Matteo Dameno, Carmine Iascone, STMicroelectronics");
 MODULE_LICENSE("GPL");
 
-

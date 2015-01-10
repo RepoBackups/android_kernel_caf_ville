@@ -255,6 +255,7 @@ struct msm_camera_sensor_platform_info {
 	void *privacy_light_info;
 	enum sensor_mount_angle sensor_mount_angle;
 	bool ews_enable;
+	bool board_control_reset_pin;
 #endif
 };
 
@@ -348,6 +349,8 @@ struct msm_camera_sensor_info {
 	uint32_t kpi_sensor_end;
 	uint8_t (*preview_skip_frame)(void);
 	int sensor_cut;
+	int dual_camera;
+	struct clk* main_clk;
 #endif
 };
 
@@ -552,9 +555,6 @@ struct msm_fb_platform_data {
 	int (*allow_set_offset)(void);
 	char prim_panel_name[PANEL_NAME_MAX_LEN];
 	char ext_panel_name[PANEL_NAME_MAX_LEN];
-#ifdef CONFIG_UPDATE_LCDC_LUT
-	int (*update_lcdc_lut)(void);
-#endif
 };
 
 struct msm_hdmi_platform_data {
@@ -606,8 +606,6 @@ struct msm_i2c_platform_data {
 	int use_gsbi_shared_mode;
 	int keep_ahb_clk_on;
 	void (*msm_i2c_config_gpio)(int iface, int config_type);
-	bool active_only;
-	uint32_t master_id;
 #ifdef CONFIG_MACH_HTC
 	int share_uart_flag;
 #endif

@@ -15,9 +15,7 @@
 
 #include <linux/input/cy8c_cs.h>
 #include <linux/delay.h>
-#ifdef CONFIG_POWERSUSPEND
-#include <linux/powersuspend.h>
-#endif
+#include <linux/earlysuspend.h>
 #include <linux/hrtimer.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
@@ -27,11 +25,9 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/workqueue.h>
+#include <linux/pl_sensor.h>
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 #include <linux/cm3629.h>
-#endif
-#ifdef CONFIG_BLN
-#include <linux/leds-pm8xxx-htc.h>
 #endif
 
 #define CY8C_I2C_RETRY_TIMES 	(10)
@@ -43,9 +39,7 @@ struct cy8c_cs_data {
 	struct input_dev *input_dev;
 	struct workqueue_struct *cy8c_wq;
 	struct work_struct work;
-#ifdef CONFIG_POWERSUSPEND
-	struct power_suspend power_suspend;
-#endif
+	struct early_suspend early_suspend;
 	int use_irq;
 	struct hrtimer timer;
 	uint16_t version;
@@ -71,10 +65,9 @@ static int disable_key;
 static int reset_cnt; 
 
 extern int board_build_flag(void);
-
-#if defined(CONFIG_POWERSUSPEND)
-static void cy8c_cs_power_suspend(struct power_suspend *h);
-static void cy8c_cs_power_resume(struct power_suspend *h);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void cy8c_cs_early_suspend(struct early_suspend *h);
+static void cy8c_cs_late_resume(struct early_suspend *h);
 #endif
 
 #if defined(CONFIG_BLN) || defined (CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
@@ -91,11 +84,11 @@ extern uint8_t touchscreen_is_on(void) {
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-#define S2W_CONT_TOUT 300
+#define S2W_CONT_TOUT 250
 #define DEBUG 0
 
 #define DT2W_TIMEOUT_MAX 275 
-#define DT2W_TIMEOUT_MIN 5
+#define DT2W_TIMEOUT_MIN 150
 
 int pocket_detect = 1; 
 int s2w_switch = 1;
@@ -188,23 +181,22 @@ static void dt2w_func(int btn_state, int btn_id, cputime64_t dtrigger_time) {
 	if (btn_state != 0)
 		return;	
 
-	if (dt2w_switch == 3)
+	if (dt2w_switch == 3) {
 		dt2w_button = 4;
-	else
+	} else {
 		dt2w_button = dt2w_switch;
+	}
 
 	if (btn_id != dt2w_button)
 		return;
 
-    dt2w_time[1] = dt2w_time[0];
-    dt2w_time[0] = dtrigger_time;
-#if DEBUG
+        dt2w_time[1] = dt2w_time[0];
+        dt2w_time[0] = dtrigger_time;
+
 	printk(KERN_INFO"[DT2W]: inside the function\n");
-#endif
+
 	if (scr_suspended == true && ((dt2w_time[0]-dt2w_time[1]) > DT2W_TIMEOUT_MIN) && ((dt2w_time[0]-dt2w_time[1]) < DT2W_TIMEOUT_MAX)) {
-#if DEBUG
                printk(KERN_INFO"[DT2W]: OFF->ON\n");
-#endif
                sweep2wake_pwrtrigger();
 	}
 
@@ -247,54 +239,38 @@ static void do_sweep2wake(int btn_state, int btn_id, cputime64_t trigger_time) {
 		if (((s2w_h[0][2] == 0) && (s2w_h[1][2] == 1) && ((s2w_t[1]-s2w_t[2]) < S2W_CONT_TOUT)) &&
 			((s2w_h[0][1] == 0) && (s2w_h[1][1] == 2) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 			((s2w_h[0][0] == 0) && (s2w_h[1][0] == 4))) {
-#if DEBUG			
 			printk(KERN_INFO"[sweep2wake]: >> OFF->ON <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		} else if (((s2w_h[0][1] == 1) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 					((s2w_h[0][0] == 0) && (s2w_h[1][0] == 4))) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> OFF->ON (special case) <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		} else if (((s2w_h[0][1] == 0) && (s2w_h[1][1] == 1) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 					(s2w_h[0][0] == 2)) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> OFF->ON (special case #2) <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		} else if (((s2w_h[0][1] == 0) && (s2w_h[1][1] == 1) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 				((s2w_h[0][0] == 2) || (s2w_h[0][0] == 3))) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> OFF->ON (special case #3) <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		} else if (((s2w_h[0][1] == 0) && (s2w_h[1][1] == 1) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 				((s2w_h[0][0] == 0) && (s2w_h[1][0] == 4))) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> OFF->ON (special case #4) <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		}
 	} else if (!scr_suspended) {
 		if (((s2w_h[0][2] == 0) && (s2w_h[1][2] == 4) && ((s2w_t[1]-s2w_t[2]) < S2W_CONT_TOUT)) &&
 			((s2w_h[0][1] == 0) && (s2w_h[1][1] == 2) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 			((s2w_h[0][0] == 0) && (s2w_h[1][0] == 1))) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> ON->OFF <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		} else if (((s2w_h[0][1] == 2) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 					((s2w_h[0][0] == 0) && (s2w_h[1][0] == 1))) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> ON->OFF (special case) <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		} else if (((s2w_h[0][1] == 0) && (s2w_h[1][1] == 4) && ((s2w_t[0]-s2w_t[1]) < S2W_CONT_TOUT)) &&
 					((s2w_h[0][0] == 1) || (s2w_h[0][0] == 3))) {
-#if DEBUG
 			printk(KERN_INFO"[sweep2wake]: >> ON->OFF (special case #2) <<\n");
-#endif
 			sweep2wake_pwrtrigger();
 		}
 	}
@@ -805,25 +781,26 @@ static void report_key_func(struct cy8c_cs_data *cs, uint8_t vk)
 	int ret = 0;
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 		int btn_state = 0, btn_id = 0;
-		cputime64_t trigger_time = ktime_to_ms(ktime_get());
+		cputime64_t trigger_time = 0;
+		cputime64_t dtrigger_time = 0;
 #endif
 	if ((cs->debug_level & 0x01) || board_build_flag() > 0)
 		pr_info("[cap] vk = %x\n", vk);
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-	if (vk) {
-		//more than one btn pressed
-		cs->btn_count = population_counter(vk);
-	} else if (cs->vk_id) {
-		//exactly one btn pressed
-		cs->btn_count = 1;
-	} else {
-		//release btn
-		cs->btn_count = 0;
-		s2w_reset();
+		if (vk) {
+			//more than one btn pressed
+			cs->btn_count = population_counter(vk);
+		} else if (cs->vk_id) {
+			//exactly one btn pressed
+			cs->btn_count = 1;
+		} else {
+			//release btn
+			cs->btn_count = 0;
+			s2w_reset();
 #if DEBUG
 			printk(KERN_INFO"[sweep2wake]: Button(s) release(d).\n");
 #endif
-	}
+		}
 #endif
 
 	if (vk) {
@@ -896,13 +873,17 @@ static void report_key_func(struct cy8c_cs_data *cs, uint8_t vk)
 					btn_state = 3; // back + home + apps
 					break;
 			}
-		} 
-		else if (cs->btn_count == 1)
+		} else if (cs->btn_count == 1) {
 			btn_state = 0; // single button
-		if (dt2w_switch > 0)
-            dt2w_func(btn_state, btn_id, trigger_time);
-		if (s2w_switch > 0)
+		}
+		if (s2w_switch > 0) {
+			trigger_time = ktime_to_ms(ktime_get());
 			do_sweep2wake(btn_state, btn_id, trigger_time);
+		}
+                if (dt2w_switch > 0) {
+                        dtrigger_time = ktime_to_ms(ktime_get());
+                        dt2w_func(btn_state, btn_id, dtrigger_time);
+                }
 	}
 #endif
 	if (cs->func_support & CS_FUNC_PRINTRAW) {
@@ -943,6 +924,7 @@ enableirq:
 		enable_irq(cs->client->irq);
 }
 
+#if 1
 static enum hrtimer_restart cy8c_cs_timer_func(struct hrtimer *timer)
 {
 	struct cy8c_cs_data *cs;
@@ -951,7 +933,8 @@ static enum hrtimer_restart cy8c_cs_timer_func(struct hrtimer *timer)
 	queue_work(cs->cy8c_wq, &cs->work);
 	return HRTIMER_NORESTART;
 }
-
+#endif
+#if 1
 static irqreturn_t cy8c_cs_irq_handler(int irq, void *dev_id)
 {
 	struct cy8c_cs_data *cs = dev_id;
@@ -960,6 +943,7 @@ static irqreturn_t cy8c_cs_irq_handler(int irq, void *dev_id)
 	queue_work(cs->cy8c_wq, &cs->work);
 	return IRQ_HANDLED;
 }
+#endif
 
 static int cy8c_cs_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
@@ -1055,10 +1039,12 @@ static int cy8c_cs_probe(struct i2c_client *client,
 		}
 		INIT_DELAYED_WORK(&cs->work_raw, cy8c_rawdata_print);
 	}
-#if defined(CONFIG_POWERSUSPEND)
-	cs->power_suspend.suspend = cy8c_cs_power_suspend;
-	cs->power_suspend.resume  = cy8c_cs_power_resume;
-	register_power_suspend(&cs->power_suspend);
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	cs->early_suspend.level   = EARLY_SUSPEND_LEVEL_STOP_DRAWING;
+	cs->early_suspend.suspend = cy8c_cs_early_suspend;
+	cs->early_suspend.resume  = cy8c_cs_late_resume;
+	register_early_suspend(&cs->early_suspend);
 #endif
 	cy8c_touchkey_sysfs_init();
 
@@ -1066,9 +1052,12 @@ static int cy8c_cs_probe(struct i2c_client *client,
 	if (client->irq && cs->use_irq) {
 		ret = request_irq(client->irq, cy8c_cs_irq_handler,
 #if defined (CONFIG_BLN) || defined(CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
-				  IRQF_TRIGGER_LOW | IRQF_ONESHOT | IRQF_NO_SUSPEND
+				  IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_NO_SUSPEND
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+				| IRQF_IRQPOLL
+#endif
 #else
-				  IRQF_TRIGGER_LOW
+				  IRQF_TRIGGER_FALLING
 #endif
 				  ,cs->id.chipid == CS_CHIPID ? CYPRESS_SS_NAME : CYPRESS_CS_NAME,
 				  cs);
@@ -1106,9 +1095,8 @@ static int cy8c_cs_remove(struct i2c_client *client)
 	struct cy8c_cs_data *cs = i2c_get_clientdata(client);
 
 	cy8c_touchkey_sysfs_deinit();
-#ifdef CONFIG_POWERSUSPEND
-	unregister_power_suspend(&cs->power_suspend);
-#endif
+
+	unregister_early_suspend(&cs->early_suspend);
 	free_irq(client->irq, cs);
 	input_unregister_device(cs->input_dev);
 
@@ -1128,32 +1116,29 @@ static int cy8c_cs_suspend(struct i2c_client *client, pm_message_t mesg)
 	scr_suspended = true;
 #endif
 #if defined (CONFIG_BLN) && !defined(CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
-	if(bln > 0)
-		enable_irq_wake(client->irq);
+	enable_irq_wake(client->irq);
 #endif
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-	if (s2w_switch > 0 || dt2w_switch > 0
-#ifdef CONFIG_BLN
-		|| bln > 0
-#endif
-		) {
+	if (s2w_switch > 0 || dt2w_switch > 0) {
 		//screen off, enable_irq_wake
 		enable_irq_wake(client->irq);
 	}
-	else {
 #endif
-		if (cs->func_support & CS_FUNC_PRINTRAW) {
-			ret = cancel_delayed_work_sync(&cs->work_raw);
-			if (!ret)
-				cancel_delayed_work(&cs->work_raw);
-		}
-		if (client->irq && cs->use_irq) {
-			disable_irq(client->irq);
-			ret = cancel_work_sync(&cs->work);
-			if (ret)
-				enable_irq(client->irq);
-		}
-		i2c_cy8c_write_byte_data(client, CS_MODE, CS_CMD_DSLEEP);
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+	if (s2w_switch == 0 && dt2w_switch == 0) {
+#endif
+	if (cs->func_support & CS_FUNC_PRINTRAW) {
+		ret = cancel_delayed_work_sync(&cs->work_raw);
+		if (!ret)
+			cancel_delayed_work(&cs->work_raw);
+	}
+	if (client->irq && cs->use_irq) {
+		disable_irq(client->irq);
+		ret = cancel_work_sync(&cs->work);
+		if (ret)
+			enable_irq(client->irq);
+	}
+	i2c_cy8c_write_byte_data(client, CS_MODE, CS_CMD_DSLEEP);
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 	}
 #endif
@@ -1166,45 +1151,39 @@ static int cy8c_cs_resume(struct i2c_client *client)
 
 	pr_info("[cap] %s\n", __func__);
 
-#if defined (CONFIG_BLN) || defined(CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
-	scr_suspended = false;
-#endif
 #if defined (CONFIG_BLN) && !defined(CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE)
-	if(bln > 0)
-		disable_irq_wake(client->irq);
+	scr_suspended = false;
+	disable_irq_wake(client->irq);
 #endif
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
-	if (s2w_switch == 0 && dt2w_switch == 0
-#ifdef CONFIG_BLN
-		&& bln == 0
-#endif
-		) {
+	scr_suspended = false;
+	if (s2w_switch == 0 && dt2w_switch == 0) {
 		disable_irq_wake(client->irq);
 #endif
-		cs->reset();
+	cs->reset();
 
-		usleep(10);
+	usleep(50);
 
-		if (client->irq && cs->use_irq)
-			enable_irq(client->irq);
+	if (client->irq && cs->use_irq)
+		enable_irq(client->irq);
 #ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
 	}
 #endif
 	return 0;
 }
 
-#ifdef CONFIG_POWERSUSPEND
-static void cy8c_cs_power_suspend(struct power_suspend *h)
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void cy8c_cs_early_suspend(struct early_suspend *h)
 {
 	struct cy8c_cs_data *ts;
-	ts = container_of(h, struct cy8c_cs_data, power_suspend);
+	ts = container_of(h, struct cy8c_cs_data, early_suspend);
 	cy8c_cs_suspend(ts->client, PMSG_SUSPEND);
 }
 
-static void cy8c_cs_power_resume(struct power_suspend *h)
+static void cy8c_cs_late_resume(struct early_suspend *h)
 {
 	struct cy8c_cs_data *ts;
-	ts = container_of(h, struct cy8c_cs_data, power_suspend);
+	ts = container_of(h, struct cy8c_cs_data, early_suspend);
 	cy8c_cs_resume(ts->client);
 }
 #endif
@@ -1217,7 +1196,7 @@ static struct i2c_driver cy8c_cs_driver = {
 	.probe		= cy8c_cs_probe,
 	.remove		= cy8c_cs_remove,
 	.id_table	= cy8c_cs_id,
-#ifndef CONFIG_POWERSUSPEND
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= cy8c_cs_suspend,
 	.resume		= cy8c_cs_resume,
 #endif

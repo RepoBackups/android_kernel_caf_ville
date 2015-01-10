@@ -20,7 +20,7 @@
 #include <linux/bma250.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
-#include<linux/powersuspend.h>
+#include<linux/earlysuspend.h>
 #include <linux/export.h>
 #include <linux/module.h>
 
@@ -36,16 +36,12 @@
 
 #define RETRY_TIMES	10
 
-#ifdef CONFIG_POWERSUSPEND
-#define POWERSUSPEND_BMA
-#endif
-
 static struct i2c_client *this_client;
 
 struct bma250_data {
 	struct input_dev *input_dev;
 	struct work_struct work;
-	struct power_suspend power_suspend;
+	struct early_suspend early_suspend;
 };
 
 static struct bma250_platform_data *pdata;
@@ -198,16 +194,6 @@ static int BMA_set_mode(unsigned char mode)
 
 	memset(buffer, 0, 2);
 
-	if (pdata->power_LPM && (mode < 2)) {
-		switch (mode) {
-		case bma250_MODE_NORMAL:
-			pdata->power_LPM(0);
-			break;
-		default:
-			break;
-		}
-	}
-
 	D("%s: mode = 0x%02x\n", __func__, mode);
 	if (mode < 2) {
 		buffer[0] = bma250_MODE_CTRL_REG;
@@ -237,15 +223,6 @@ static int BMA_set_mode(unsigned char mode)
 	if (mode == bma250_MODE_NORMAL)
 		usleep(2000);
 	
-	if (pdata->power_LPM && (mode < 2)) {
-		switch (mode) {
-		case bma250_MODE_SUSPEND:
-			pdata->power_LPM(1);
-			break;
-		default:
-			break;
-		}
-	}
 
 	return ret;
 }
@@ -401,17 +378,17 @@ static long bma_ioctl(struct file *file, unsigned int cmd,
 	return 0;
 }
 
-#ifdef POWERSUSPEND_BMA
+#ifdef EARLY_SUSPEND_BMA
 
-static void bma250_power_suspend(struct power_suspend *handler)
+static void bma250_early_suspend(struct early_suspend *handler)
 {
 	if (!atomic_read(&PhoneOn_flag))
 		BMA_set_mode(bma250_MODE_SUSPEND);
 	else
-		printk(KERN_DEBUG "bma250_power_suspend: PhoneOn_flag is set\n");
+		printk(KERN_DEBUG "bma250_early_suspend: PhoneOn_flag is set\n");
 }
 
-static void bma250_late_resume(struct power_suspend *handler)
+static void bma250_late_resume(struct early_suspend *handler)
 {
 	BMA_set_mode(bma250_MODE_NORMAL);
 }
@@ -627,10 +604,10 @@ int bma250_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit_misc_device_register_failed;
 	}
 
-#ifdef POWERSUSPEND_BMA
-	bma->power_suspend.suspend = bma250_power_suspend;
-	bma->power_suspend.resume = bma250_late_resume;
-	register_power_suspend(&bma->power_suspend);
+#ifdef EARLY_SUSPEND_BMA
+	bma->early_suspend.suspend = bma250_early_suspend;
+	bma->early_suspend.resume = bma250_late_resume;
+	register_early_suspend(&bma->early_suspend);
 #endif
 
 	err = bma250_registerAttr();
@@ -671,7 +648,7 @@ static struct i2c_driver bma250_driver = {
 	.remove = bma250_remove,
 	.id_table	= bma250_id,
 
-#ifndef POWERSUSPEND_BMA
+#ifndef EARLY_SUSPEND_BMA
 	.suspend = bma250_suspend,
 	.resume = bma250_resume,
 #endif

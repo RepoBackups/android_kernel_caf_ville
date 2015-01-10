@@ -449,5 +449,4 @@ void __init m7_init_mmc(void)
 
 	apq8064_add_sdcc(1, m7_sdc1_pdata);
 	apq8064_add_sdcc(3, &m7_wifi_data);
-	msm_add_uio();
 }

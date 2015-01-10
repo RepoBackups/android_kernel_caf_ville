@@ -318,7 +318,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free;
-	int other_file = 0;
+	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
@@ -406,7 +406,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			continue;
 
 		oom_score_adj = p->signal->oom_score_adj;
-		if (oom_score_adj < selected_oom_score_adj) {
+		if (oom_score_adj < min_score_adj) {
 			task_unlock(p);
 			continue;
 		}
@@ -414,9 +414,13 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		task_unlock(p);
 		if (tasksize <= 0)
 			continue;
-		if (selected && oom_score_adj == selected_oom_score_adj &&
-			tasksize <= selected_tasksize)
-			continue;
+		if (selected) {
+			if (oom_score_adj < selected_oom_score_adj)
+				continue;
+			if (oom_score_adj == selected_oom_score_adj &&
+			    tasksize <= selected_tasksize)
+				continue;
+		}
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;

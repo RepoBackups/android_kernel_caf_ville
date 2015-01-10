@@ -1812,7 +1812,6 @@ static void a2xx_rbbm_intrcallback(struct kgsl_device *device)
 				addr);
 	}
 
-
 	status &= RBBM_INT_MASK;
 	adreno_regwrite(device, REG_RBBM_INT_ACK, status);
 }
@@ -1924,8 +1923,10 @@ static int a2xx_rb_init(struct adreno_device *adreno_dev,
 
 	/* NQ and External Memory Swap */
 	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
+
 	/* Enable Protected mode registers for A2xx */
 	GSL_RB_WRITE(cmds, cmds_gpu, GSL_RB_PROTECTED_MODE_CONTROL);
+
 	/* Disable header dumping and Header dump address */
 	GSL_RB_WRITE(cmds, cmds_gpu, 0x00000000);
 	/* Header dump size */
@@ -2079,7 +2080,7 @@ static void a2xx_start(struct adreno_device *adreno_dev)
 
 	adreno_regwrite(device, REG_RBBM_DEBUG, 0x00080000);
 
-    /* Turn on protection */
+	/* Turn on protection */
 	a2xx_protect_init(device);
 
 	/* Make sure interrupts are disabled */

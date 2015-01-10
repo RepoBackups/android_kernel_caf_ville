@@ -31,16 +31,6 @@ struct msm_pmem_setting{
 	resource_size_t pmem_camera_size;
 	resource_size_t ram_console_start;
 	resource_size_t ram_console_size;
-#ifdef CONFIG_BUILD_EDIAG
-	resource_size_t pmem_ediag_start;
-	resource_size_t pmem_ediag_size;
-	resource_size_t pmem_ediag1_start;
-	resource_size_t pmem_ediag1_size;
-	resource_size_t pmem_ediag2_start;
-	resource_size_t pmem_ediag2_size;
-	resource_size_t pmem_ediag3_start;
-	resource_size_t pmem_ediag3_size;
-#endif	
 };
 
 enum {
@@ -176,13 +166,15 @@ struct t_usb_status_notifier{
 void reset_dflipflop(void);
 #endif
 
-int board_mfg_mode(void);
+void __init htc_add_ramconsole_devices(void);
+
 int __init parse_tag_smi(const struct tag *tags);
-int __init parse_tag_hwid(const struct tag * tags);
-int __init parse_tag_skuid(const struct tag * tags);
-int parse_tag_engineerid(const struct tag * tags);
+int __init parse_tag_hwid(const struct tag *tags);
+int __init parse_tag_skuid(const struct tag *tags);
+int __init parse_tag_engineerid(const struct tag *tags);
 int __init parse_tag_smlog(const struct tag *tags);
 
+int board_mfg_mode(void);
 char *board_serialno(void);
 unsigned long get_kernel_flag(void);
 unsigned long get_debug_flag(void);

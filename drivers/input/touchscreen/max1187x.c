@@ -18,7 +18,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/delay.h>
-#include <linux/powersuspend.h>
+#include <linux/earlysuspend.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/input/mt.h>
@@ -132,8 +132,8 @@ struct data {
 	struct max1187x_board_config  *fw_config;
 	struct i2c_client *client;
 	struct input_dev *input_dev;
-	struct power_suspend power_suspend;
-	u8 power_suspend_registered;
+	struct early_suspend early_suspend;
+	u8 early_suspend_registered;
 	atomic_t scheduled_work_irq;
 	u32 irq_receive_time;
 	struct mutex irq_mutex;
@@ -192,8 +192,8 @@ struct data {
 	u16 cycles:1;
 };
 
-static void power_suspend(struct power_suspend *h);
-static void late_resume(struct power_suspend *h);
+static void early_suspend(struct early_suspend *h);
+static void late_resume(struct early_suspend *h);
 
 static int device_init(struct i2c_client *client);
 static int device_deinit(struct i2c_client *client);
@@ -2872,11 +2872,13 @@ static int device_init(struct i2c_client *client)
 		ts->width_offset = PDATA(panel_min_x);
 		ts->height_offset = PDATA(panel_min_y);
 	}
+
 	
-	ts->power_suspend.suspend = power_suspend;
-	ts->power_suspend.resume = late_resume;
-	register_power_suspend(&ts->power_suspend);
-	ts->power_suspend_registered = 1;
+	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING - 1;
+	ts->early_suspend.suspend = early_suspend;
+	ts->early_suspend.resume = late_resume;
+	register_early_suspend(&ts->early_suspend);
+	ts->early_suspend_registered = 1;
 	pr_info_if(8, "(INIT): suspend/resume registration OK");
 
 	gl_ts = ts;
@@ -2960,8 +2962,8 @@ static int device_deinit(struct i2c_client *client)
 	if (ts->sysfs_created && ts->sysfs_created--)
 		device_remove_bin_file(&client->dev, &dev_attr_report);
 
-	if (ts->power_suspend_registered)
-		unregister_power_suspend(&ts->power_suspend);
+	if (ts->early_suspend_registered)
+		unregister_early_suspend(&ts->early_suspend);
 	if (ts->input_dev)
 		input_unregister_device(ts->input_dev);
 
@@ -3235,11 +3237,11 @@ static void release_report(struct data *ts)
 	mutex_unlock(&ts->report_mutex);
 }
 
-static void power_suspend(struct power_suspend *h)
+static void early_suspend(struct early_suspend *h)
 {
 	u16 data[] = {0x0020, 0x0001, 0x0000};
 	struct data *ts;
-	ts = container_of(h, struct data, power_suspend);
+	ts = container_of(h, struct data, early_suspend);
 
 	pr_info("max1187x_%s", __func__);
 	DISABLE_IRQ();
@@ -3247,11 +3249,11 @@ static void power_suspend(struct power_suspend *h)
 	ENABLE_IRQ();
 }
 
-static void late_resume(struct power_suspend *h)
+static void late_resume(struct early_suspend *h)
 {
 	u16 data[] = {0x0020, 0x0001, 0x0002};
 	struct data *ts;
-	ts = container_of(h, struct data, power_suspend);
+	ts = container_of(h, struct data, early_suspend);
 
 	pr_info("max1187x_%s", __func__);
 	

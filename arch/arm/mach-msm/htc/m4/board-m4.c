@@ -1358,7 +1358,7 @@ static struct msm_bus_paths qseecom_hw_bus_scale_usecases[] = {
 	},
 	{
 		ARRAY_SIZE(qseecom_enable_dfab_vectors),
-		qseecom_enable_sfpb_vectors,
+		qseecom_enable_dfab_vectors,
 	},
 	{
 		ARRAY_SIZE(qseecom_enable_sfpb_vectors),
@@ -3650,6 +3650,8 @@ static void __init m4_init(void)
 
 	if (board_mfg_mode() == MFG_MODE_MINI)
 		platform_device_register(&device_htc_ramdump);
+
+	htc_add_ramconsole_devices();
 
 	platform_device_register(&msm_gpio_device);
 	msm_tsens_early_init(&msm_tsens_pdata);
