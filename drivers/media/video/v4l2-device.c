@@ -155,7 +155,6 @@ int v4l2_device_register_subdev(struct v4l2_device *v4l2_dev,
 		if (err)
 			goto error_module;
 	}
-
 	
 	err = v4l2_ctrl_add_handler(v4l2_dev->ctrl_handler, sd->ctrl_handler);
 	if (err)

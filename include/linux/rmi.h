@@ -30,8 +30,8 @@
 #include <linux/list.h>
 #include <linux/interrupt.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 
 
@@ -351,8 +351,8 @@ struct rmi_device {
 	struct rmi_driver *driver;
 	struct rmi_phys_device *phys;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend_handler;
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend_handler;
 #endif
 };
 #define to_rmi_device(d) container_of(d, struct rmi_device, dev);

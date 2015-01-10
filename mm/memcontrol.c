@@ -57,6 +57,15 @@
 
 #include <trace/events/vmscan.h>
 
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+#include <linux/swap.h>
+
+#define MAX_SCAN_NO 2048
+#define SOFT_RECLAIM_ONETIME 1024
+#define HIDDEN_CGROUP_NAME	"hidden"
+#define RTCC_CGROUP_NAME	"rtcc"
+#endif
+
 struct cgroup_subsys mem_cgroup_subsys __read_mostly;
 #define MEM_CGROUP_RECLAIM_RETRIES	5
 struct mem_cgroup *root_mem_cgroup __read_mostly;
@@ -76,6 +85,10 @@ static int really_do_swap_account __initdata = 0;
 #define do_swap_account		(0)
 #endif
 
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+extern void need_soft_reclaim(void);
+extern int hidden_cgroup_counter;
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 /*
  * Statistics for memory cgroup.
@@ -1491,7 +1504,7 @@ static int mem_cgroup_count_children(struct mem_cgroup *memcg)
 /*
  * Return the memory (and swap, if configured) limit for a memcg.
  */
-u64 mem_cgroup_get_limit(struct mem_cgroup *memcg)
+static u64 mem_cgroup_get_limit(struct mem_cgroup *memcg)
 {
 	u64 limit;
 
@@ -1514,6 +1527,78 @@ u64 mem_cgroup_get_limit(struct mem_cgroup *memcg)
 	}
 
 	return limit;
+}
+
+void mem_cgroup_out_of_memory(struct mem_cgroup *memcg, gfp_t gfp_mask,
+			      int order)
+{
+	struct mem_cgroup *iter;
+	unsigned long chosen_points = 0;
+	unsigned long totalpages;
+	unsigned int points = 0;
+	struct task_struct *chosen = NULL;
+
+	/*
+	 * If current has a pending SIGKILL, then automatically select it.  The
+	 * goal is to allow it to allocate so that it may quickly exit and free
+	 * its memory.
+	 */
+	if (fatal_signal_pending(current)) {
+		set_thread_flag(TIF_MEMDIE);
+		return;
+	}
+
+	check_panic_on_oom(CONSTRAINT_MEMCG, gfp_mask, order, NULL);
+	totalpages = mem_cgroup_get_limit(memcg) >> PAGE_SHIFT ? : 1;
+	for_each_mem_cgroup_tree(iter, memcg) {
+		struct cgroup *cgroup = iter->css.cgroup;
+		struct cgroup_iter it;
+		struct task_struct *task;
+
+		cgroup_iter_start(cgroup, &it);
+		while ((task = cgroup_iter_next(cgroup, &it))) {
+			switch (oom_scan_process_thread(task, totalpages, NULL,
+							false)) {
+			case OOM_SCAN_SELECT:
+				if (chosen)
+					put_task_struct(chosen);
+				chosen = task;
+				chosen_points = ULONG_MAX;
+				get_task_struct(chosen);
+				/* fall through */
+			case OOM_SCAN_CONTINUE:
+				continue;
+			case OOM_SCAN_ABORT:
+				cgroup_iter_end(cgroup, &it);
+				mem_cgroup_iter_break(memcg, iter);
+				if (chosen)
+					put_task_struct(chosen);
+				return;
+			case OOM_SCAN_OK:
+				break;
+			};
+			points = oom_badness(task, memcg, NULL, totalpages);
+			if (!points || points < chosen_points)
+				continue;
+			/* Prefer thread group leaders for display purposes */
+			if (points == chosen_points &&
+			    thread_group_leader(chosen))
+				continue;
+
+			if (chosen)
+				put_task_struct(chosen);
+			chosen = task;
+			chosen_points = points;
+			get_task_struct(chosen);
+		}
+		cgroup_iter_end(cgroup, &it);
+	}
+
+	if (!chosen)
+		return;
+	points = chosen_points * 1000 / totalpages;
+	oom_kill_process(chosen, gfp_mask, order, points, totalpages, memcg,
+			 NULL, "Memory cgroup out of memory");
 }
 
 static unsigned long mem_cgroup_reclaim(struct mem_cgroup *memcg,
@@ -1732,9 +1817,17 @@ static int mem_cgroup_soft_reclaim(struct mem_cgroup *root_memcg,
 		}
 		if (!mem_cgroup_reclaimable(victim, false))
 			continue;
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+		if(nr_swap_pages <= SOFT_RECLAIM_ONETIME)
+			break;
+#endif
 		total += mem_cgroup_shrink_node_zone(victim, gfp_mask, false,
 						     zone, &nr_scanned);
 		*total_scanned += nr_scanned;
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+		if(*total_scanned > MAX_SCAN_NO)
+			break;
+#endif
 		if (!res_counter_soft_limit_excess(&root_memcg->res))
 			break;
 	}
@@ -5033,7 +5126,9 @@ mem_cgroup_create(struct cgroup *cont)
 	if (parent)
 		memcg->swappiness = mem_cgroup_swappiness(parent);
 	atomic_set(&memcg->refcnt, 1);
+
 	memcg->move_charge_at_immigrate = 0;
+
 	mutex_init(&memcg->thresholds_lock);
 	spin_lock_init(&memcg->move_lock);
 	return &memcg->css;
@@ -5431,6 +5526,52 @@ static void mem_cgroup_clear_mc(void)
 	spin_unlock(&mc.lock);
 	mem_cgroup_end_move(from);
 }
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+static struct mem_cgroup *rtcc_memcgrp = NULL;
+static struct mem_cgroup *hidden_memcgrp = NULL;
+static struct cgroup *get_compcache_group(const char *grp_name)
+{
+	struct cgroup_subsys_state *css = NULL;
+	int found = 0;
+	int nextid;
+
+	rcu_read_lock();
+
+	for (nextid = 0; nextid < 4; nextid++) {
+		css = css_get_next(&mem_cgroup_subsys, nextid, &root_mem_cgroup->css, &found);
+		if (!css)
+			break;
+		if (!strcmp(css->cgroup->dentry->d_iname, grp_name))
+			goto out;
+	}
+
+	rcu_read_unlock();
+	return NULL;
+
+out:
+	rcu_read_unlock();
+	return css->cgroup;
+}
+
+static struct mem_cgroup *get_compcache_memgrp(void)
+{
+	struct cgroup *cg= get_compcache_group(RTCC_CGROUP_NAME);
+	if (!cg)
+		return NULL;
+
+	return (mem_cgroup_from_cont(cg));
+}
+
+static struct mem_cgroup *get_hiddencgrp_memgrp(void)
+{
+	struct cgroup *cg= get_compcache_group(HIDDEN_CGROUP_NAME);
+	if (!cg)
+		return NULL;
+
+	return (mem_cgroup_from_cont(cg));
+}
+
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 static int mem_cgroup_can_attach(struct cgroup *cgroup,
 				 struct cgroup_taskset *tset)
@@ -5438,6 +5579,17 @@ static int mem_cgroup_can_attach(struct cgroup *cgroup,
 	struct task_struct *p = cgroup_taskset_first(tset);
 	int ret = 0;
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgroup);
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+	if (hidden_memcgrp == memcg) {
+		hidden_cgroup_counter ++;
+	} else if (hidden_memcgrp == NULL) {
+		hidden_memcgrp = get_hiddencgrp_memgrp();
+		if (hidden_memcgrp == memcg) {
+			hidden_cgroup_counter ++;
+		}
+	}
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 	if (memcg->move_charge_at_immigrate) {
 		struct mm_struct *mm;
@@ -5632,6 +5784,16 @@ static void mem_cgroup_move_task(struct cgroup *cont,
 			mem_cgroup_move_charge(mm);
 		mmput(mm);
 	}
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+	if (mc.to && rtcc_memcgrp == mc.to) {
+		need_soft_reclaim();
+	}
+	else if (rtcc_memcgrp == NULL) {
+		rtcc_memcgrp = get_compcache_memgrp();
+	}
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+
 	if (mc.to)
 		mem_cgroup_clear_mc();
 }

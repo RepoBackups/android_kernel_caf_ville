@@ -83,7 +83,7 @@ static struct {
  * kgsl_hang_check() - Check for GPU hang
  * data: KGSL device structure
  *
- * This function is called every KGSL_TIMEOUT_HANG_DETECT time when
+ * This function is called every KGSL_TIMEOUT_PART time when
  * GPU is active to check for hang. If a hang is detected we
  * trigger fault tolerance.
  */
@@ -102,7 +102,7 @@ void kgsl_hang_check(struct work_struct *work)
 			adreno_dump_and_exec_ft(device);
 
 		mod_timer(&device->hang_timer,
-			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_HANG_DETECT)));
+			(jiffies + msecs_to_jiffies(KGSL_TIMEOUT_PART)));
 	}
 
 	mutex_unlock(&device->mutex);
@@ -115,19 +115,15 @@ void kgsl_hang_check(struct work_struct *work)
  * This function is called when hang timer expires, in this
  * function we check if GPU is in active state and queue the
  * work on device workqueue to check for the hang. We restart
- * the timer after KGSL_TIMEOUT_HANG_DETECT time.
+ * the timer after KGSL_TIMEOUT_PART time.
  */
 void hang_timer(unsigned long data)
 {
 	struct kgsl_device *device = (struct kgsl_device *) data;
 
-	/* check Hang only for 3d device */
-	if (device->id == KGSL_DEVICE_3D0) {
-		if (device->state == KGSL_STATE_ACTIVE) {
-
-			/* Have work run in a non-interrupt context. */
-			queue_work(device->work_queue, &device->hang_check_ws);
-		}
+	if (device->state == KGSL_STATE_ACTIVE) {
+		/* Have work run in a non-interrupt context. */
+		queue_work(device->work_queue, &device->hang_check_ws);
 	}
 }
 
@@ -549,9 +545,20 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	}
 
 	kref_init(&context->refcount);
+	/*
+	 * Get a refernce to the process private so its not destroyed, until
+	 * the context is destroyed. This will also prevent the pagetable
+	 * from being destroyed
+	 */
+	if (!kgsl_process_private_get(dev_priv->process_priv)) {
+		ret = -EBADF;
+		goto fail_free_id;
+	}
+
 	context->dev_priv = dev_priv;
 	ret = kgsl_sync_timeline_create(context);
 	if (ret) {
+		kgsl_process_private_put(dev_priv->process_priv);
 		goto fail_free_id;
 	}
 
@@ -621,7 +628,7 @@ kgsl_context_detach(struct kgsl_context *context)
 	context->id = KGSL_CONTEXT_INVALID;
 	idr_remove(&device->context_idr, id);
 	write_unlock(&device->context_lock);
-	context->dev_priv = NULL;
+
 	kgsl_context_put(context);
 }
 
@@ -631,6 +638,7 @@ kgsl_context_destroy(struct kref *kref)
 	struct kgsl_context *context = container_of(kref, struct kgsl_context,
 						    refcount);
 	kgsl_sync_timeline_destroy(context);
+	kgsl_process_private_put(context->dev_priv->process_priv);
 	kfree(context);
 }
 
@@ -808,7 +816,7 @@ const struct dev_pm_ops kgsl_pm_ops = {
 };
 EXPORT_SYMBOL(kgsl_pm_ops);
 
-void kgsl_early_suspend_driver(struct early_suspend *h)
+void kgsl_power_suspend_driver(struct power_suspend *h)
 {
 	struct kgsl_device *device = container_of(h,
 					struct kgsl_device, display_off);
@@ -825,7 +833,7 @@ void kgsl_early_suspend_driver(struct early_suspend *h)
 	mutex_unlock(&device->mutex);
 	KGSL_PWR_WARN(device, "early suspend end\n");
 }
-EXPORT_SYMBOL(kgsl_early_suspend_driver);
+EXPORT_SYMBOL(kgsl_power_suspend_driver);
 
 int kgsl_suspend_driver(struct platform_device *pdev,
 					pm_message_t state)
@@ -842,7 +850,7 @@ int kgsl_resume_driver(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(kgsl_resume_driver);
 
-void kgsl_late_resume_driver(struct early_suspend *h)
+void kgsl_late_resume_driver(struct power_suspend *h)
 {
 	struct kgsl_device *device = container_of(h,
 					struct kgsl_device, display_off);
@@ -862,7 +870,7 @@ void kgsl_late_resume_driver(struct early_suspend *h)
 	 * the desired state here.
 	 *
 	 * Except if active_cnt is non zero which means that
-	 * we probably went to early_suspend with it non zero
+	 * we probably went to power_suspend with it non zero
 	 * and thus the system is still in an active state.
 	 */
 

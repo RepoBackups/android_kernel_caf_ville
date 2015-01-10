@@ -16,7 +16,6 @@
 
 #include <linux/init.h>
 #include <linux/export.h>
-#include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/namei.h>
@@ -2746,7 +2745,7 @@ out:
 static long do_rmdir(int dfd, const char __user *pathname)
 {
 	int error = 0;
-	char *name = NULL;
+	char * name = NULL;
 	struct dentry *dentry;
 	struct nameidata nd;
 

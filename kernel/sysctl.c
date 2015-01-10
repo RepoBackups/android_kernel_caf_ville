@@ -102,6 +102,7 @@ extern char core_pattern[];
 extern unsigned int core_pipe_limit;
 extern int pid_max;
 extern int min_free_kbytes;
+extern int wmark_min_kbytes, wmark_low_kbytes, wmark_high_kbytes;
 extern int min_free_order_shift;
 extern int pid_max_min, pid_max_max;
 extern int sysctl_drop_caches;
@@ -1017,6 +1018,32 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec,
 },
 #endif
+	{
+		.procname	= "wmark_min_kbytes",
+		.data		= &wmark_min_kbytes,
+		.maxlen		= sizeof(wmark_min_kbytes),
+		.mode		= 0644,
+		.proc_handler	= wmark_min_kbytes_sysctl_handler,
+		.extra1		= &zero,
+		.extra2		= &wmark_low_kbytes,
+	},
+	{
+		.procname	= "wmark_low_kbytes",
+		.data		= &wmark_low_kbytes,
+		.maxlen		= sizeof(wmark_low_kbytes),
+		.mode		= 0644,
+		.proc_handler	= wmark_low_kbytes_sysctl_handler,
+		.extra1		= &wmark_min_kbytes,
+		.extra2		= &wmark_high_kbytes,
+	},
+	{
+		.procname	= "wmark_high_kbytes",
+		.data		= &wmark_high_kbytes,
+		.maxlen		= sizeof(wmark_high_kbytes),
+		.mode		= 0644,
+		.proc_handler	= wmark_high_kbytes_sysctl_handler,
+		.extra1		= &wmark_low_kbytes,
+	},
 /*
  * NOTE: do not add new entries to this table unless you have read
  * Documentation/sysctl/ctl_unnumbered.txt
@@ -1113,6 +1140,33 @@ static struct ctl_table vm_table[] = {
 		.mode		= 0644,
 		.proc_handler	= dirty_writeback_centisecs_handler,
 	},
+#ifdef CONFIG_DYNAMIC_PAGE_WRITEBACK
+	{
+		.procname	= "dynamic_dirty_writeback",
+		.data		= &dyn_dirty_writeback_enabled,
+		.maxlen		= sizeof(dyn_dirty_writeback_enabled),
+		.mode		= 0644,
+		.proc_handler	= dynamic_dirty_writeback_handler,
+		.extra1		= &zero,
+		.extra2		= &one,
+	},
+	{
+		.procname	= "dirty_writeback_active_centisecs",
+		.data		= &dirty_writeback_active_interval,
+		.maxlen		= sizeof(dirty_writeback_active_interval),
+		.mode		= 0644,
+		.proc_handler	= dirty_writeback_active_centisecs_handler,
+		.extra1		= &zero,
+	},
+	{
+		.procname	= "dirty_writeback_suspend_centisecs",
+		.data		= &dirty_writeback_suspend_interval,
+		.maxlen		= sizeof(dirty_writeback_suspend_interval),
+		.mode		= 0644,
+		.proc_handler	= dirty_writeback_suspend_centisecs_handler,
+		.extra1		= &zero,
+	},
+#endif
 	{
 		.procname	= "dirty_expire_centisecs",
 		.data		= &dirty_expire_interval,
@@ -1396,6 +1450,20 @@ static struct ctl_table vm_table[] = {
 		.extra2		= &one,
 	},
 #endif
+	{
+		.procname	= "user_reserve_kbytes",
+		.data		= &sysctl_user_reserve_kbytes,
+		.maxlen		= sizeof(sysctl_user_reserve_kbytes),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
+	},
+	{
+		.procname	= "admin_reserve_kbytes",
+		.data		= &sysctl_admin_reserve_kbytes,
+		.maxlen		= sizeof(sysctl_admin_reserve_kbytes),
+		.mode		= 0644,
+		.proc_handler	= proc_doulongvec_minmax,
+	},
 	{ }
 };
 
@@ -1409,14 +1477,14 @@ static struct ctl_table fs_table[] = {
 	{
 		.procname	= "inode-nr",
 		.data		= &inodes_stat,
-		.maxlen		= 2*sizeof(int),
+		.maxlen		= 2*sizeof(long),
 		.mode		= 0444,
 		.proc_handler	= proc_nr_inodes,
 	},
 	{
 		.procname	= "inode-state",
 		.data		= &inodes_stat,
-		.maxlen		= 7*sizeof(int),
+		.maxlen		= 7*sizeof(long),
 		.mode		= 0444,
 		.proc_handler	= proc_nr_inodes,
 	},
@@ -1446,7 +1514,7 @@ static struct ctl_table fs_table[] = {
 	{
 		.procname	= "dentry-state",
 		.data		= &dentry_stat,
-		.maxlen		= 6*sizeof(int),
+		.maxlen		= 6*sizeof(long),
 		.mode		= 0444,
 		.proc_handler	= proc_nr_dentry,
 	},

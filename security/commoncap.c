@@ -523,9 +523,9 @@ skip:
 
 
 	/* Don't let someone trace a set[ug]id/setpcap binary with the revised
-	 * credentials unless they have the appropriate permit.
+	 * credentials unless they have the appropriate permit
 	 *
-	 * In addition, if NO_NEW_PRIVS, then ensure we get no new privs.
+	 *In addition, if NO_NEW_PRIVS, then ensure we get no new privs.
 	 */
 	if ((new->euid != old->uid ||
 	     new->egid != old->gid ||

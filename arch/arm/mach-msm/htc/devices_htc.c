@@ -14,10 +14,9 @@
  * GNU General Public License for more details.
  */
 
-#include <asm/setup.h>
 #include <mach/board.h>
 #include <mach/board_htc.h>
-#include <mach/msm_iomap.h>
+#include <asm/setup.h>
 #include <linux/mtd/nand.h>
 #include <linux/module.h>
 
@@ -775,26 +774,3 @@ char *board_cid(void)
 	return android_cid;
 }
 EXPORT_SYMBOL(board_cid);
-
-#define MSM_RAM_CONSOLE_BASE	MSM_HTC_RAM_CONSOLE_PHYS
-#define MSM_RAM_CONSOLE_SIZE	MSM_HTC_RAM_CONSOLE_SIZE
-
-static struct resource ram_console_resources[] = {
-	{
-		.start	= MSM_RAM_CONSOLE_BASE,
-		.end	= MSM_RAM_CONSOLE_BASE + MSM_RAM_CONSOLE_SIZE - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-};
-
-static struct platform_device ram_console_device = {
-	.name		= "ram_console",
-	.id		= -1,
-	.num_resources	= ARRAY_SIZE(ram_console_resources),
-	.resource	= ram_console_resources,
-};
-
-void __init htc_add_ramconsole_devices(void)
-{
-	platform_device_register(&ram_console_device);
-}

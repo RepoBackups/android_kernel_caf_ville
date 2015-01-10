@@ -19,7 +19,7 @@
 
 #ifndef __HTC_FLASHLIGHT_H
 #define __HTC_FLASHLIGHT_H
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 
 #define FLASHLIGHT_NAME "flashlight"
 

@@ -81,4 +81,9 @@ extern int unregister_notifier_by_touchkey(struct notifier_block *nb);
 #ifdef CONFIG_BLN
 extern uint8_t touchscreen_is_on(void);
 #endif
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+#include <linux/input.h>
+/* Sweep2Wake */
+extern void sweep2wake_setdev(struct input_dev * input_device);
+ #endif 
 #endif

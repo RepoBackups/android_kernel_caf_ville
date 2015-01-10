@@ -225,13 +225,10 @@ again:
 		raw_spin_unlock(&base->cpu_base->lock);
 		raw_spin_lock(&new_base->cpu_base->lock);
 
-		this_cpu = smp_processor_id();
-
-		if (cpu != this_cpu && (hrtimer_check_target(timer, new_base)
-			|| !cpu_online(cpu))) {
+		if (cpu != this_cpu && hrtimer_check_target(timer, new_base)) {
+			cpu = this_cpu;
 			raw_spin_unlock(&new_base->cpu_base->lock);
 			raw_spin_lock(&base->cpu_base->lock);
-			cpu = smp_processor_id();
 			timer->base = base;
 			goto again;
 		}
@@ -1616,7 +1613,7 @@ long hrtimer_nanosleep(struct timespec *rqtp, struct timespec __user *rmtp,
 	int ret = 0;
 	unsigned long slack;
 
-	slack = current->timer_slack_ns;
+	slack = task_get_effective_timer_slack(current);
 	if (rt_task(current))
 		slack = 0;
 

@@ -14,7 +14,7 @@
  */
 
 #include <linux/delay.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
@@ -71,6 +71,7 @@ static int p_irq_status;
 static int prev_correction;
 static int phone_status;
 static int oncall = 0;
+static int ps_near;
 static uint8_t sensor_chipId[3] = {0};
 static uint8_t ps1_canc_set;
 static uint8_t ps2_canc_set;
@@ -96,7 +97,7 @@ struct cm3629_info {
 	struct device *ps_dev;
 	struct input_dev *ls_input_dev;
 	struct input_dev *ps_input_dev;
-	struct early_suspend early_suspend;
+	struct power_suspend power_suspend;
 	struct i2c_client *i2c_client;
 	struct workqueue_struct *lp_wq;
 	struct wake_lock ps_wake_lock;
@@ -559,6 +560,8 @@ static void report_psensor_input_event(struct cm3629_info *lpi, int interrupt_fl
 		val = (interrupt_flag == 2) ? 0 : 1;
 	}
 
+	ps_near = !val;
+
 	if (lpi->ps_debounce == 1 && lpi->mfg_mode != MFG_MODE) {
 		if (val == 0) {
 			D("[PS][cm3629] delay proximity %s, ps_adc=%d, High thd= %d, interrupt_flag %d\n",
@@ -723,7 +726,7 @@ static int lightsensor_disable(struct cm3629_info *lpi);
 static void sensor_irq_do_work(struct work_struct *work)
 {
 	struct cm3629_info *lpi = lp_info;
-	uint8_t cmd[3];
+	uint8_t cmd[3] = {0,0,0};
 	uint8_t add = 0;
 	
 	_cm3629_I2C_Read2(lpi->cm3629_slave_address, INT_FLAG, cmd, 2);
@@ -2476,6 +2479,16 @@ err_free_ps_input_device:
 	return ret;
 }
 
+int power_key_check_in_pocket_no_light(void)
+{
+	struct cm3629_info *lpi = lp_info;
+
+	psensor_enable(lpi);
+	psensor_disable(lpi);
+
+	return ps_near;
+}
+
 static int cm3629_read_chip_id(struct cm3629_info *lpi)
 {
 	uint8_t chip_id[3] = {0};
@@ -2554,7 +2567,8 @@ fail_free_intr_pin:
 	return ret;
 }
 
-static void cm3629_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_POWERSUSPEND
+static void cm3629_power_suspend(struct power_suspend *h)
 {
 	struct cm3629_info *lpi = lp_info;
 
@@ -2566,12 +2580,14 @@ static void cm3629_early_suspend(struct early_suspend *h)
 		D("[PS][cm3629] %s: Psensor enable, so did not enter lpm\n", __func__);
 }
 
-static void cm3629_late_resume(struct early_suspend *h)
+
+static void cm3629_late_resume(struct power_suspend *h)
 {
 	sensor_lpm_power(0);
 	D("[LS][cm3629] %s\n", __func__);
 
 }
+#endif
 #if 0
 static void release_psensor_wakelock_handler(void)
 {
@@ -2804,11 +2820,11 @@ static int cm3629_probe(struct i2c_client *client,
 	if (ret)
 		goto err_create_ps_device;
 
-	lpi->early_suspend.level =
-			EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	lpi->early_suspend.suspend = cm3629_early_suspend;
-	lpi->early_suspend.resume = cm3629_late_resume;
-	register_early_suspend(&lpi->early_suspend);
+#ifdef CONFIG_POWERSUSPEND
+	lpi->power_suspend.suspend = cm3629_power_suspend;
+	lpi->power_suspend.resume = cm3629_late_resume;
+	register_power_suspend(&lpi->power_suspend);
+#endif
 
 	sensor_lpm_power(0);
 	D("[PS][cm3629] %s: Probe success!\n", __func__);
@@ -2873,3 +2889,4 @@ module_exit(cm3629_exit);
 
 MODULE_DESCRIPTION("cm3629 Driver");
 MODULE_LICENSE("GPL");
+

@@ -144,7 +144,7 @@ static struct xor_block_template xor_block_arm4regs = {
 		NEON_TEMPLATES;			\
 	} while (0)
 
-#ifdef CONFIG_KERNEL_MODE_NEON
+#ifdef CONFIG_NEON
 
 extern struct xor_block_template const xor_block_neon_inner;
 
