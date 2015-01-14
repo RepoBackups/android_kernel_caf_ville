@@ -2238,6 +2238,26 @@ config MSM_MPDEC_INPUTBOOST_CPUMIN
         help
           This pushes the cpu min speed to predefined values on input
 
+config TD_FRAMEWORK
+	bool "TRIPNDROID Framework"
+	depends on TDF_HOTPLUG
+	select ARM_L1_CACHE_SHIFT_6
+	default n
+	help
+	  Implement a custom kernel overhaul for mobile Android devices.
+	  Currently only supporting Tegra 3 cpu's. Will be platform
+	  independent in the future
+
+config TDF_RQ_STATS
+	bool "TDF Scheduler RQ Statistics"
+	depends on TDF_HOTPLUG && TD_FRAMEWORK
+	help
+	  This option enables load statistics from the scheduler to be
+	  available to drivers like for example cpu hotplug drivers.
+	  It is platform independent and every generic hotplug driver is
+	  able to use it.
+	  usage: sched_get_nr_running_avg();
+
 #
 # CPU Hotplug Driver Choices
 #
@@ -2245,16 +2265,16 @@ choice
 	prompt "CPU HotPlug Driver Choice"
 	default MSM_MPDECISION
 config MSM_MPDECISION
-	bool "MSM_MPDECISION from Qualcomm"
+	bool "MSM_MPDECISION by Qualcomm Atheros Inc."
 	help
 	  Qualcomm's Closed-Source MPDECISION
 config INTELLI_PLUG_HOTPLUG
-	bool "Intelli_Plug from @Faux123"
+	bool "Intelli_Plug by @Faux123"
         select INTELLI_PLUG
         help
           Generic Intelli-Plug cpu hotplug driver for ARM SOCs
 config MSM_MPDEC
-	bool "MSM_MPDECISION from @ShowP1984"
+	bool "MSM_MPDECISION by @ShowP1984"
 	depends on MSM_SMP
 	select MSM_MPDEC_INPUTBOOST_CPUMIN
 	help
@@ -2263,7 +2283,14 @@ config MSM_MPDEC
 config SLEEPY_PLUG
 	bool "Sleepy_Plug Driver by @rmbq"
 	help
-	  Sleepy_Plug Driver by @rmbq with Modified MP_DECISION Logic
+	  Sleepy_Plug Driver by @rmbq
+config TDF_HOTPLUG
+        bool "TDF_Hotplug Driver by @TripNRaver"
+	depends on HOTPLUG_CPU && CPU_FREQ && !ARCH_CPU_PROBE_RELEASE
+	select TD_FRAMEWORK
+	select TDF_RQ_STATS
+	help
+	  This option enables turning CPUs on/off according to scheduler loads
 endchoice
 
 config MSM_GSBI9_UART

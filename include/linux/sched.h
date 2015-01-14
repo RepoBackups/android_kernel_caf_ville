@@ -147,6 +147,12 @@ extern unsigned long avg_nr_running(void);
 extern unsigned long nr_iowait_cpu(int cpu);
 extern unsigned long this_cpu_load(void);
 
+/* Definitions for TDF_RQ_STATS */
+#ifdef CONFIG_TDF_RQ_STATS
+extern void sched_update_tdf(int cpu, unsigned long nr, bool inc);
+extern void sched_running_avg(int *avg);
+#endif
+
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 extern unsigned long this_cpu_loadx(int i);
 #endif
