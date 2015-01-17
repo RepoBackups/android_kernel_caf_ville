@@ -1,0 +1,23 @@
+config TRIPNDROID_FRAMEWORK
+        bool "TRIPNDROID Framework"
+	depends on TRIPNDROID_HOTPLUG
+        select ARM_L1_CACHE_SHIFT_6
+        default n
+        help
+          Implement a custom kernel overhaul for mobile Android devices.
+          Currently only supporting Tegra 3 cpu's. Will be platform
+          independent in the future
+
+config TDF_RQ_STATS
+        bool "TDF Scheduler RQ Statistics"
+        depends on TRIPNDROID_HOTPLUG
+        help
+          This option enables load statistics from the scheduler to be
+          available to drivers like for example cpu hotplug drivers.
+          It is platform independent and every generic hotplug driver is
+          able to use it.
+          usage: sched_get_nr_running_avg();
+
+config TDF_HOTPLUG
+	bool "TRIPNDROID Hotplug Driver"
+	depends on TRIPNDROID_HOTPLUG

@@ -2229,6 +2229,8 @@ config MSM_STANDALONE_POWER_COLLAPSE
 # CPU Hotplug Driver Dependencies
 #
 
+source "drivers/tripndroid/Kconfig"
+
 source "arch/arm/hotplug/Kconfig"
 
 config MSM_MPDEC_INPUTBOOST_CPUMIN
@@ -2237,26 +2239,6 @@ config MSM_MPDEC_INPUTBOOST_CPUMIN
         default y
         help
           This pushes the cpu min speed to predefined values on input
-
-config TRIPNDROID_FRAMEWORK
-	bool "TRIPNDROID Framework"
-	depends on TDF_HOTPLUG
-	select ARM_L1_CACHE_SHIFT_6
-	default n
-	help
-	  Implement a custom kernel overhaul for mobile Android devices.
-	  Currently only supporting Tegra 3 cpu's. Will be platform
-	  independent in the future
-
-config TDF_RQ_STATS
-	bool "TDF Scheduler RQ Statistics"
-	depends on TDF_HOTPLUG && TRIPNDROID_FRAMEWORK
-	help
-	  This option enables load statistics from the scheduler to be
-	  available to drivers like for example cpu hotplug drivers.
-	  It is platform independent and every generic hotplug driver is
-	  able to use it.
-	  usage: sched_get_nr_running_avg();
 
 #
 # CPU Hotplug Driver Choices
@@ -2284,11 +2266,12 @@ config SLEEPY_PLUG
 	bool "Sleepy_Plug Driver by @rmbq"
 	help
 	  Sleepy_Plug Driver by @rmbq
-config TDF_HOTPLUG
+config TRIPNDROID_HOTPLUG
         bool "TDF_Hotplug Driver by @TripNRaver"
 	depends on HOTPLUG_CPU && CPU_FREQ && !ARCH_CPU_PROBE_RELEASE
 	select TRIPNDROID_FRAMEWORK
 	select TDF_RQ_STATS
+	select TDF_HOTPLUG
 	help
 	  This option enables turning CPUs on/off according to scheduler loads
 endchoice
