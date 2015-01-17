@@ -2238,7 +2238,7 @@ config MSM_MPDEC_INPUTBOOST_CPUMIN
         help
           This pushes the cpu min speed to predefined values on input
 
-config TD_FRAMEWORK
+config TRIPNDROID_FRAMEWORK
 	bool "TRIPNDROID Framework"
 	depends on TDF_HOTPLUG
 	select ARM_L1_CACHE_SHIFT_6
@@ -2250,7 +2250,7 @@ config TD_FRAMEWORK
 
 config TDF_RQ_STATS
 	bool "TDF Scheduler RQ Statistics"
-	depends on TDF_HOTPLUG && TD_FRAMEWORK
+	depends on TDF_HOTPLUG && TRIPNDROID_FRAMEWORK
 	help
 	  This option enables load statistics from the scheduler to be
 	  available to drivers like for example cpu hotplug drivers.
@@ -2287,7 +2287,7 @@ config SLEEPY_PLUG
 config TDF_HOTPLUG
         bool "TDF_Hotplug Driver by @TripNRaver"
 	depends on HOTPLUG_CPU && CPU_FREQ && !ARCH_CPU_PROBE_RELEASE
-	select TD_FRAMEWORK
+	select TRIPNDROID_FRAMEWORK
 	select TDF_RQ_STATS
 	help
 	  This option enables turning CPUs on/off according to scheduler loads
